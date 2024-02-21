@@ -3,6 +3,7 @@ use std::io;
 use std::path::Path;
 
 mod cla;
+mod command;
 
 fn main() {
     let args = Args::create();
