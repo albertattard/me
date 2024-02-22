@@ -79,6 +79,30 @@ After command
         assert_eq!(expected, parsed);
     }
 
+    #[test]
+    fn parse_content_with_multiple_single_line_command() {
+        let content = r#"
+# README
+
+```shell
+$ echo "Hello"
+```
+
+```shell
+$ ls -la
+```
+
+```shell
+$ echo "Goodbye"
+```
+
+"#;
+
+        let parsed = Commands::parse(content).unwrap();
+        let expected = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
+        assert_eq!(expected, parsed);
+    }
+
     pub fn empty() -> Commands {
         Commands { commands: vec![] }
     }
