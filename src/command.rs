@@ -154,11 +154,45 @@ $ echo "Line 3"
         assert_eq!(expected, parsed);
     }
 
-    pub fn empty() -> Commands {
+    #[test]
+    fn parse_content_with_multiple_multi_line_commands() {
+        let content = r#"
+# README
+```shell
+$ echo "Before"
+$ java \
+  -jar target/app-1.jar
+$ java \
+  -jar target/app-2.jar
+$ echo "After"
+```
+"#;
+
+        let parsed = Commands::parse(content).unwrap();
+        let expected = Commands {
+            commands: vec![
+                Command {
+                    command: vec!["echo \"Before\"".to_string()],
+                },
+                Command {
+                    command: vec!["java".to_string(), "-jar target/app-1.jar".to_string()],
+                },
+                Command {
+                    command: vec!["java".to_string(), "-jar target/app-2.jar".to_string()],
+                },
+                Command {
+                    command: vec!["echo \"After\"".to_string()],
+                },
+            ],
+        };
+        assert_eq!(expected, parsed);
+    }
+
+    fn empty() -> Commands {
         Commands { commands: vec![] }
     }
 
-    pub fn of_strs(commands: Vec<&str>) -> Commands {
+    fn of_strs(commands: Vec<&str>) -> Commands {
         let commands = commands
             .iter()
             .map(|command| Command {
