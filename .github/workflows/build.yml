@@ -32,13 +32,6 @@ jobs:
           VERSION=$(date +%Y%m%d.%H%M%S)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-#      - name: Upload binary
-#        id: upload-artifact
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: artifact-${{ env.VERSION }}
-#          path: target/release/me
-
       - name: Release binary
         uses: softprops/action-gh-release@v1
         env:
