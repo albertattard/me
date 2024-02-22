@@ -134,6 +134,26 @@ $ java \
         assert_eq!(expected, parsed);
     }
 
+    #[test]
+    fn parse_content_with_multiple_single_line_commands() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+```
+"#;
+
+        let parsed = Commands::parse(content).unwrap();
+        let expected = of_strs(vec![
+            "echo \"Line 1\"",
+            "echo \"Line 2\"",
+            "echo \"Line 3\"",
+        ]);
+        assert_eq!(expected, parsed);
+    }
+
     pub fn empty() -> Commands {
         Commands { commands: vec![] }
     }
