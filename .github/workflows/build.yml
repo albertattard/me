@@ -23,3 +23,24 @@ jobs:
       - name: Run the tests
         run: |
           cargo test
+
+      - name: Extract version
+        run: |
+          VERSION=$(date +%Y%m%d.%H%M%S)
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Copy binary
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifact-${{ env.VERSION }}
+          path: target/release/me
+
+      - name: Release binary
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.sha }}
+          name: Release ${{ github.sha }}
+          body: ${{ github.event.commits[0].message }}
+          assets: ${{ github.workspace }}/artifacts/*.artifact-*
