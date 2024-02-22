@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::io;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -49,6 +50,32 @@ impl Commands {
         }
 
         Ok(Commands { commands })
+    }
+}
+
+impl Display for Command {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut command = self.command.iter();
+
+        if let Some(first_line) = command.next() {
+            write!(f, "{}", first_line)?;
+
+            for line in command {
+                writeln!(f, " \\")?;
+                write!(f, " {}", line)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
+impl Display for Commands {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for command in &self.commands {
+            writeln!(f, "{}", command)?;
+        }
+        Ok(())
     }
 }
 
@@ -186,6 +213,92 @@ $ echo "After"
             ],
         };
         assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn format_empty_command() {
+        let commands = empty();
+        let formatted = format!("{}", commands);
+        let expected = "";
+        assert_eq!(expected, formatted);
+    }
+
+    #[test]
+    fn format_one_single_line_command() {
+        let commands = of_strs(vec!["ls -la"]);
+        let formatted = format!("{}", commands);
+        let expected = r#"ls -la
+"#;
+        assert_eq!(expected, formatted);
+    }
+
+    #[test]
+    fn format_multiple_single_line_command() {
+        let commands = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
+        let formatted = format!("{}", commands);
+        let expected = r#"echo "Hello"
+ls -la
+echo "Goodbye"
+"#;
+        assert_eq!(expected, formatted);
+    }
+
+    #[test]
+    fn format_one_multi_line_command() {
+        let commands = Commands {
+            commands: vec![Command {
+                command: vec!["java".to_string(), "-jar target/app.jar".to_string()],
+            }],
+        };
+        let formatted = format!("{}", commands);
+        let expected = r#"java \
+ -jar target/app.jar
+"#;
+        assert_eq!(expected, formatted);
+    }
+
+    #[test]
+    fn format_multiple_single_line_commands() {
+        let commands = of_strs(vec![
+            "echo \"Line 1\"",
+            "echo \"Line 2\"",
+            "echo \"Line 3\"",
+        ]);
+        let formatted = format!("{}", commands);
+        let expected = r#"echo "Line 1"
+echo "Line 2"
+echo "Line 3"
+"#;
+        assert_eq!(expected, formatted);
+    }
+
+    #[test]
+    fn format_multiple_multi_line_commands() {
+        let commands = Commands {
+            commands: vec![
+                Command {
+                    command: vec!["echo \"Before\"".to_string()],
+                },
+                Command {
+                    command: vec!["java".to_string(), "-jar target/app-1.jar".to_string()],
+                },
+                Command {
+                    command: vec!["java".to_string(), "-jar target/app-2.jar".to_string()],
+                },
+                Command {
+                    command: vec!["echo \"After\"".to_string()],
+                },
+            ],
+        };
+        let formatted = format!("{}", commands);
+        let expected = r#"echo "Before"
+java \
+ -jar target/app-1.jar
+java \
+ -jar target/app-2.jar
+echo "After"
+"#;
+        assert_eq!(expected, formatted);
     }
 
     fn empty() -> Commands {
