@@ -43,4 +43,4 @@ jobs:
           tag_name: ${{ github.sha }}
           name: Release ${{ github.sha }}
           body: ${{ github.event.commits[0].message }}
-          assets: ${{ github.workspace }}/artifacts/*.artifact-*
+          files: ${{ github.workspace }}/artifacts/*.artifact-*
