@@ -29,12 +29,12 @@ jobs:
           VERSION=$(date +%Y%m%d.%H%M%S)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
-      - name: Upload binary
-        id: upload-artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: artifact-${{ env.VERSION }}
-          path: target/release/me
+#      - name: Upload binary
+#        id: upload-artifact
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: artifact-${{ env.VERSION }}
+#          path: target/release/me
 
       - name: Release binary
         uses: softprops/action-gh-release@v1
@@ -44,4 +44,4 @@ jobs:
           tag_name: ${{ github.sha }}
           name: Release ${{ github.sha }}
           body: ${{ github.event.commits[0].message }}
-          files: ${{ steps.upload-artifact.outputs.path }}/*.artifact-*
+          files: target/release/me
