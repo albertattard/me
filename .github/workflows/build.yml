@@ -15,3 +15,11 @@ jobs:
       - name: Update Rust
         run: |
           rustup update
+
+      - name: Build application
+        run: |
+          cargo build --release
+
+      - name: Run the tests
+        run: |
+          cargo test
