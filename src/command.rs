@@ -33,7 +33,7 @@ impl Commands {
                     command_line = command_line[2..].to_string();
                 }
 
-                if command_line.ends_with("\\") {
+                if command_line.ends_with('\\') {
                     command_line = command_line[..command_line.len() - 1]
                         .trim_end()
                         .to_string();
@@ -50,6 +50,19 @@ impl Commands {
         }
 
         Ok(Commands { commands })
+    }
+
+    pub fn as_shell_script(&self) -> String {
+        let mut buffer_command = String::new();
+        buffer_command.push_str(
+            r#"#!/bin/sh
+
+set -e
+
+"#,
+        );
+        buffer_command.push_str(&self.to_string());
+        buffer_command
     }
 }
 
@@ -296,6 +309,27 @@ java \
  -jar target/app-1.jar
 java \
  -jar target/app-2.jar
+echo "After"
+"#;
+        assert_eq!(expected, formatted);
+    }
+
+    #[test]
+    fn format_as_shell_script() {
+        let commands = of_strs(vec![
+            "echo \"Before\"",
+            "java -jar target/app-1.jar",
+            "java -jar target/app-2.jar",
+            "echo \"After\"",
+        ]);
+        let formatted = commands.as_shell_script();
+        let expected = r#"#!/bin/sh
+
+set -e
+
+echo "Before"
+java -jar target/app-1.jar
+java -jar target/app-2.jar
 echo "After"
 "#;
         assert_eq!(expected, formatted);
