@@ -13,6 +13,7 @@ pub struct Commands {
 impl Commands {
     pub fn parse(content: &str) -> io::Result<Self> {
         let mut commands = vec![];
+        let mut buffer_command = vec![];
         let mut within_command_block = false;
         for line in content.lines() {
             if line.trim().eq("```shell") {
@@ -30,9 +31,20 @@ impl Commands {
                 if command_line.starts_with("$ ") {
                     command_line = command_line[2..].to_string();
                 }
+
+                if command_line.ends_with("\\") {
+                    command_line = command_line[..command_line.len() - 1]
+                        .trim_end()
+                        .to_string();
+                    buffer_command.push(command_line);
+                    continue;
+                }
+
+                buffer_command.push(command_line.trim_start().to_string());
                 commands.push(Command {
-                    command: vec![command_line],
+                    command: buffer_command.clone(),
                 });
+                buffer_command.clear();
             }
         }
 
@@ -100,6 +112,25 @@ $ echo "Goodbye"
 
         let parsed = Commands::parse(content).unwrap();
         let expected = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_with_one_multi_line_command() {
+        let content = r#"
+# README
+```shell
+$ java \
+  -jar target/app.jar
+```
+"#;
+
+        let parsed = Commands::parse(content).unwrap();
+        let expected = Commands {
+            commands: vec![Command {
+                command: vec!["java".to_string(), "-jar target/app.jar".to_string()],
+            }],
+        };
         assert_eq!(expected, parsed);
     }
 
