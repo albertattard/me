@@ -22,6 +22,12 @@ Hello, world!
 In this example we only have one _shell_ code block that simply prints
 `Hello, world!`.
 
+The motivation behind this application is to verify that the examples provided
+in the `README.md` documents work well (do not fail). This ensures that the
+documentation (in the form of MARKDOWN) is still valid even after changes that
+are made to the code base. Anyone following the steps provided by the
+documentation should achieve the same results.
+
 For additional options and usage instructions, you can access the help
 documentation with:
 
