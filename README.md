@@ -56,3 +56,19 @@ $ me --help
    [here](https://github.com/albertattard/me/releases). There is no need for
    special tags; simply push your changes to `main`, and GitHub Actions will
    handle the build and testing processes.
+
+3. Install the MARKDOWN executor
+
+   **This only works on Linux**.
+
+   ```shell
+   $ mkdir -p "${HOME}/.local/bin"
+   $ curl \
+     --silent \
+     --location \
+     --output "${HOME}/.local/bin/me" \
+     'https://github.com/albertattard/me/releases/download/20240226.085322/me'
+   $ chmod +x "${HOME}/.local/bin/me"
+   $ sudo rm -f '/usr/local/bin/me'
+   $ sudo ln -s "${HOME}/.local/bin/me" '/usr/local/bin/me'
+   ```
