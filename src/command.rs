@@ -28,7 +28,7 @@ impl Commands {
             }
 
             if within_command_block {
-                let mut command_line = line.to_string();
+                let mut command_line = line.trim_start().to_string();
                 if command_line.starts_with("$ ") {
                     command_line = command_line[2..].to_string();
                 }
@@ -148,6 +148,33 @@ $ ls -la
 $ echo "Goodbye"
 ```
 
+"#;
+
+        let parsed = Commands::parse(content).unwrap();
+        let expected = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_with_different_indentation() {
+        let content = r#"
+# README
+
+```shell
+$ echo "Hello"
+```
+
+- `ls` command
+
+  ```shell
+  $ ls -la
+  ```
+
+  1. `echo` command
+
+     ```shell
+     $ echo "Goodbye"
+     ```
 "#;
 
         let parsed = Commands::parse(content).unwrap();
