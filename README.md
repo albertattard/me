@@ -39,6 +39,10 @@ $ me --help
 
 1. Build and test the application
 
+   This application is developed with the
+   [rust](https://www.rust-lang.org/tools/install) programming language, version
+   `1.74`.
+
    ```shell
    $ cargo fmt
    $ cargo clippy
