@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::io;
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Command {
+struct Command {
     command: Vec<String>,
 }
 

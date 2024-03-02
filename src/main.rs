@@ -12,7 +12,10 @@ fn main() {
     let args = Args::create();
 
     let content = read_to_string(args.file_path()).expect("failed to read MARKDOWN file");
-    let commands = Commands::parse(&content).expect("failed to parse MARKDOWN file");
 
-    ShellScript::new(commands.as_shell_script()).run();
+    let shell_script = Commands::parse(&content)
+        .expect("failed to parse MARKDOWN file")
+        .as_shell_script();
+
+    ShellScript::new(shell_script).run();
 }
