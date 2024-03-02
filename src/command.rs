@@ -9,6 +9,10 @@ impl Options {
     pub(crate) fn new(content: String) -> Self {
         Options { content }
     }
+
+    pub(crate) fn build(self) -> Commands {
+        Commands::parse(&self)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -22,7 +26,7 @@ pub(crate) struct Commands {
 }
 
 impl Commands {
-    pub(crate) fn parse(options: &Options) -> Self {
+    fn parse(options: &Options) -> Self {
         let mut commands = vec![];
         let mut buffer_command = vec![];
         let mut within_command_block = false;
