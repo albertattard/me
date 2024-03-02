@@ -7,12 +7,12 @@ struct Command {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct Commands {
+pub(crate) struct Commands {
     commands: Vec<Command>,
 }
 
 impl Commands {
-    pub fn parse(content: &str) -> io::Result<Self> {
+    pub(crate) fn parse(options: &Options) -> Self {
         let mut commands = vec![];
         let mut buffer_command = vec![];
         let mut within_command_block = false;
@@ -52,7 +52,7 @@ impl Commands {
         Ok(Commands { commands })
     }
 
-    pub fn as_shell_script(&self) -> String {
+    pub(crate) fn as_shell_script(&self) -> String {
         let mut buffer_command = String::new();
         buffer_command.push_str(
             r#"#!/bin/sh

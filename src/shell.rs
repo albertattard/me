@@ -6,12 +6,12 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub struct ShellScript {
+pub(crate) struct ShellScript {
     path: PathBuf,
 }
 
 impl ShellScript {
-    pub fn new(commands: String) -> Self {
+    pub(crate) fn new(commands: String) -> Self {
         let path = Self::create_file_path();
 
         Self::create_shell_script(&path)
@@ -21,7 +21,7 @@ impl ShellScript {
         ShellScript { path }
     }
 
-    pub fn run(&self) {
+    pub(crate) fn run(&self) {
         Command::new("/bin/sh")
             .args(["-c", self.path_as_str()])
             .spawn()
