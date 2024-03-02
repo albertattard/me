@@ -38,8 +38,7 @@ impl ShellScript {
     }
 
     fn create_file_path() -> PathBuf {
-        let start = SystemTime::now();
-        let since_the_epoch = start
+        let since_the_epoch = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("Time went backwards");
         PathBuf::from(format!("./commands-{}.sh", since_the_epoch.as_millis()))
@@ -47,17 +46,23 @@ impl ShellScript {
 
     fn create_shell_script(path: &PathBuf) -> File {
         let shell_script = File::create(path).expect("Failed to create shell script");
+
+        Self::make_shell_script_executable(&shell_script);
+
+        shell_script
+    }
+
+    fn make_shell_script_executable(shell_script: &File) {
         let metadata = shell_script
             .metadata()
             .expect("Failed to get the script metadata");
 
         let mut permissions = metadata.permissions();
         permissions.set_mode(0o755);
+
         shell_script
             .set_permissions(permissions)
             .expect("Failed to set the script permissions");
-
-        shell_script
     }
 }
 
