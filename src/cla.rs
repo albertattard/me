@@ -1,4 +1,5 @@
 use clap::Parser;
+use std::fs::read_to_string;
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -14,7 +15,12 @@ impl Args {
         Args::parse()
     }
 
-    pub fn file_path(&self) -> PathBuf {
+    fn file_path(&self) -> PathBuf {
         PathBuf::from(&self.file_name)
+    }
+
+    pub(crate) fn read_file(&self) -> String {
+        read_to_string(self.file_path())
+            .unwrap_or_else(|_| panic!("Failed to read MARKDOWN file: {}", self.file_name))
     }
 }

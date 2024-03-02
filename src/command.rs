@@ -1,5 +1,15 @@
 use std::fmt::Display;
-use std::io;
+
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Options {
+    content: String,
+}
+
+impl Options {
+    pub(crate) fn new(content: String) -> Self {
+        Options { content }
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 struct Command {
@@ -16,7 +26,7 @@ impl Commands {
         let mut commands = vec![];
         let mut buffer_command = vec![];
         let mut within_command_block = false;
-        for line in content.lines() {
+        for line in options.content.lines() {
             if line.trim().eq("```shell") {
                 within_command_block = true;
                 continue;
@@ -49,7 +59,7 @@ impl Commands {
             }
         }
 
-        Ok(Commands { commands })
+        Commands { commands }
     }
 
     pub(crate) fn as_shell_script(&self) -> String {
@@ -99,15 +109,22 @@ mod tests {
     #[test]
     fn parse_empty_content() {
         let content = "";
-        let parsed = Commands::parse(content).unwrap();
+        let options = Options::new(content.to_string());
+        let parsed = Commands::parse(&options);
         let expected = empty();
         assert_eq!(expected, parsed);
     }
 
     #[test]
     fn parse_content_without_commands() {
-        let content = "";
-        let parsed = Commands::parse(content).unwrap();
+        let content = r#"
+# README
+
+No commands here!!
+"#;
+
+        let options = Options::new(content.to_string());
+        let parsed = Commands::parse(&options);
         let expected = empty();
         assert_eq!(expected, parsed);
     }
@@ -126,7 +143,8 @@ $ ls -la
 After command
 "#;
 
-        let parsed = Commands::parse(content).unwrap();
+        let options = Options::new(content.to_string());
+        let parsed = Commands::parse(&options);
         let expected = of_strs(vec!["ls -la"]);
         assert_eq!(expected, parsed);
     }
@@ -150,7 +168,8 @@ $ echo "Goodbye"
 
 "#;
 
-        let parsed = Commands::parse(content).unwrap();
+        let options = Options::new(content.to_string());
+        let parsed = Commands::parse(&options);
         let expected = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
         assert_eq!(expected, parsed);
     }
@@ -177,7 +196,8 @@ $ echo "Hello"
      ```
 "#;
 
-        let parsed = Commands::parse(content).unwrap();
+        let options = Options::new(content.to_string());
+        let parsed = Commands::parse(&options);
         let expected = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
         assert_eq!(expected, parsed);
     }
@@ -192,7 +212,8 @@ $ java \
 ```
 "#;
 
-        let parsed = Commands::parse(content).unwrap();
+        let options = Options::new(content.to_string());
+        let parsed = Commands::parse(&options);
         let expected = Commands {
             commands: vec![Command {
                 command: vec!["java".to_string(), "-jar target/app.jar".to_string()],
@@ -212,7 +233,8 @@ $ echo "Line 3"
 ```
 "#;
 
-        let parsed = Commands::parse(content).unwrap();
+        let options = Options::new(content.to_string());
+        let parsed = Commands::parse(&options);
         let expected = of_strs(vec![
             "echo \"Line 1\"",
             "echo \"Line 2\"",
@@ -235,7 +257,8 @@ $ echo "After"
 ```
 "#;
 
-        let parsed = Commands::parse(content).unwrap();
+        let options = Options::new(content.to_string());
+        let parsed = Commands::parse(&options);
         let expected = Commands {
             commands: vec![
                 Command {

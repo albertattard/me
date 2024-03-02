@@ -1,7 +1,5 @@
-use std::fs::read_to_string;
-
 use crate::cla::Args;
-use crate::command::Commands;
+use crate::command::{Commands, Options};
 use crate::shell::ShellScript;
 
 mod cla;
@@ -10,12 +8,7 @@ mod shell;
 
 fn main() {
     let args = Args::create();
-
-    let content = read_to_string(args.file_path()).expect("failed to read MARKDOWN file");
-
-    let shell_script = Commands::parse(&content)
-        .expect("failed to parse MARKDOWN file")
-        .as_shell_script();
-
+    let options = Options::new(args.read_file());
+    let shell_script = Commands::parse(&options).as_shell_script();
     ShellScript::new(shell_script).run();
 }
