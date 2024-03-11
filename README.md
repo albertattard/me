@@ -76,3 +76,32 @@ $ me --help
    $ sudo rm -f '/usr/local/bin/me'
    $ sudo ln -s "${HOME}/.local/bin/me" '/usr/local/bin/me'
    ```
+
+# Pending
+
+1. Add a delay between commands when the `--delay-between-commands=<DELAY>` is
+   provided. Ideally the delay is provided in the following options, either
+   `###ms` (for milliseconds) or `###s` (for seconds).
+
+2. Allow for commands to be skipped when the `--skip-commands=<COMMANDS>` is
+   provided. If possible, support regular expressions so that multiple commands
+   can be skipped with little effort. More than one command input can be
+   provided using the supported format.
+
+3. Execute the commands from the same directory where the MARKDOWN file is and
+   not from the current directory. The working directory can be overridden using
+   the `--working-directory=<PATH>` command line option. The path must be any
+   existing and accessible directory.
+
+4. Allow execution of parts of the MARKDOWN file by using the
+   `--execute-from=<COMMAND>` and `--execute-until=<COMMAND>`. These options can
+   be used independently and together and is ideal when debugging a MARKDOWN
+   file. When the `--execute-from=<COMMAND>` is provided, the
+   `--execute-until=<COMMAND>` will match the first command after the one
+   matched by `--execute-from=<COMMAND>`. The parser will fail if no commands
+   match, in either case. In the event of multiple commands matching, the first
+   one is used. If possible, support regular expressions so that multiple
+   commands can be skipped with little effort.
+
+5. Implement end-to-end testing to verify that the application is tested from
+   the end user's point of view.
