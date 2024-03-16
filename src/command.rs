@@ -97,6 +97,14 @@ impl Commands {
             }
         }
 
+        if let Some(line) = options.execute_from.as_deref() {
+            if !include_line {
+                return Err(ParserError {
+                    message: format!("No line matched the execute from: '{}'", line),
+                });
+            }
+        }
+
         Ok(Commands { commands })
     }
 
@@ -331,6 +339,26 @@ $ echo "Line 3"
             .with_execute_from(Some("$ echo \"Line 2\"".to_string()));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_execute_from_when_no_lines_match() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+```
+"#;
+
+        let line = "$ echo \"Line x\"";
+        let options = Options::new(content.to_string()).with_execute_from(Some(line.to_string()));
+        let parsed = Commands::parse(&options);
+        let expected = Err(ParserError {
+            message: format!("No line matched the execute from: '{}'", line),
+        });
         assert_eq!(expected, parsed);
     }
 
