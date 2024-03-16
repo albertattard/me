@@ -1,4 +1,5 @@
-use std::fmt::Display;
+use std::fmt;
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Options {
@@ -20,9 +21,22 @@ impl Options {
     }
 
     pub(crate) fn build(self) -> Commands {
-        Commands::parse(&self)
+        Commands::parse(&self).expect("Failed to parse the file")
     }
 }
+
+#[derive(Debug, PartialEq, Eq)]
+struct ParserError {
+    message: String,
+}
+
+impl Display for ParserError {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "{}", self.message)
+    }
+}
+
+impl std::error::Error for ParserError {}
 
 #[derive(Debug, PartialEq, Eq)]
 struct Command {
@@ -35,7 +49,7 @@ pub(crate) struct Commands {
 }
 
 impl Commands {
-    fn parse(options: &Options) -> Self {
+    fn parse(options: &Options) -> Result<Self, ParserError> {
         let mut commands = vec![];
         let mut buffer_command = vec![];
         let mut within_command_block = false;
@@ -83,7 +97,7 @@ impl Commands {
             }
         }
 
-        Commands { commands }
+        Ok(Commands { commands })
     }
 
     pub(crate) fn as_shell_script(&self) -> String {
@@ -135,7 +149,7 @@ mod tests {
         let content = "";
         let options = Options::new(content.to_string());
         let parsed = Commands::parse(&options);
-        let expected = empty();
+        let expected = ok_empty();
         assert_eq!(expected, parsed);
     }
 
@@ -149,7 +163,7 @@ No commands here!!
 
         let options = Options::new(content.to_string());
         let parsed = Commands::parse(&options);
-        let expected = empty();
+        let expected = ok_empty();
         assert_eq!(expected, parsed);
     }
 
@@ -169,7 +183,7 @@ After command
 
         let options = Options::new(content.to_string());
         let parsed = Commands::parse(&options);
-        let expected = of_strs(vec!["ls -la"]);
+        let expected = ok_of_strs(vec!["ls -la"]);
         assert_eq!(expected, parsed);
     }
 
@@ -194,7 +208,7 @@ $ echo "Goodbye"
 
         let options = Options::new(content.to_string());
         let parsed = Commands::parse(&options);
-        let expected = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
+        let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
         assert_eq!(expected, parsed);
     }
 
@@ -222,7 +236,7 @@ $ echo "Hello"
 
         let options = Options::new(content.to_string());
         let parsed = Commands::parse(&options);
-        let expected = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
+        let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
         assert_eq!(expected, parsed);
     }
 
@@ -238,11 +252,11 @@ $ java \
 
         let options = Options::new(content.to_string());
         let parsed = Commands::parse(&options);
-        let expected = Commands {
+        let expected = Ok(Commands {
             commands: vec![Command {
                 command: vec!["java".to_string(), "-jar target/app.jar".to_string()],
             }],
-        };
+        });
         assert_eq!(expected, parsed);
     }
 
@@ -259,7 +273,7 @@ $ echo "Line 3"
 
         let options = Options::new(content.to_string());
         let parsed = Commands::parse(&options);
-        let expected = of_strs(vec![
+        let expected = ok_of_strs(vec![
             "echo \"Line 1\"",
             "echo \"Line 2\"",
             "echo \"Line 3\"",
@@ -283,7 +297,7 @@ $ echo "After"
 
         let options = Options::new(content.to_string());
         let parsed = Commands::parse(&options);
-        let expected = Commands {
+        let expected = Ok(Commands {
             commands: vec![
                 Command {
                     command: vec!["echo \"Before\"".to_string()],
@@ -298,7 +312,7 @@ $ echo "After"
                     command: vec!["echo \"After\"".to_string()],
                 },
             ],
-        };
+        });
         assert_eq!(expected, parsed);
     }
 
@@ -316,7 +330,7 @@ $ echo "Line 3"
         let options = Options::new(content.to_string())
             .with_execute_from(Some("$ echo \"Line 2\"".to_string()));
         let parsed = Commands::parse(&options);
-        let expected = of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
+        let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
         assert_eq!(expected, parsed);
     }
 
@@ -425,6 +439,14 @@ java -jar target/app-2.jar
 echo "After"
 "#;
         assert_eq!(expected, formatted);
+    }
+
+    fn ok_empty() -> Result<Commands, ParserError> {
+        Ok(empty())
+    }
+
+    fn ok_of_strs(commands: Vec<&str>) -> Result<Commands, ParserError> {
+        Ok(of_strs(commands))
     }
 
     fn empty() -> Commands {

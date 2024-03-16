@@ -102,6 +102,3 @@ $ me --help
    match, in either case. In the event of multiple commands matching, the first
    one is used. If possible, support regular expressions so that multiple
    commands can be skipped with little effort.
-
-5. Implement end-to-end testing to verify that the application is tested from
-   the end user's point of view.
