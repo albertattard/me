@@ -3,11 +3,20 @@ use std::fmt::Display;
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Options {
     content: String,
+    execute_from: Option<String>,
 }
 
 impl Options {
     pub(crate) fn new(content: String) -> Self {
-        Options { content }
+        Options {
+            content,
+            execute_from: None,
+        }
+    }
+
+    pub(crate) fn with_execute_from(mut self, execute_from: Option<String>) -> Self {
+        self.execute_from = execute_from;
+        self
     }
 
     pub(crate) fn build(self) -> Commands {
@@ -30,6 +39,8 @@ impl Commands {
         let mut commands = vec![];
         let mut buffer_command = vec![];
         let mut within_command_block = false;
+        let mut include_line = false;
+
         for line in options.content.lines() {
             if line.trim().eq("```shell") {
                 within_command_block = true;
@@ -38,6 +49,15 @@ impl Commands {
 
             if line.trim().eq("```") {
                 within_command_block = false;
+                continue;
+            }
+
+            include_line = include_line
+                || options
+                    .execute_from
+                    .as_deref()
+                    .map_or(true, |m| line.eq_ignore_ascii_case(m));
+            if !include_line {
                 continue;
             }
 
@@ -279,6 +299,24 @@ $ echo "After"
                 },
             ],
         };
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_execute_from() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+```
+"#;
+
+        let options = Options::new(content.to_string())
+            .with_execute_from(Some("$ echo \"Line 2\"".to_string()));
+        let parsed = Commands::parse(&options);
+        let expected = of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
         assert_eq!(expected, parsed);
     }
 
