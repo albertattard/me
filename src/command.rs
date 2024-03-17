@@ -1,11 +1,12 @@
-use std::fmt;
+use regex::Regex;
 use std::fmt::{Debug, Display, Formatter};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub(crate) struct Options {
     content: String,
     execute_from: Option<String>,
     execute_until: Option<String>,
+    skip_commands: Option<Regex>,
 }
 
 impl Options {
@@ -14,6 +15,7 @@ impl Options {
             content,
             execute_from: None,
             execute_until: None,
+            skip_commands: None,
         }
     }
 
@@ -24,6 +26,11 @@ impl Options {
 
     pub(crate) fn with_execute_until(mut self, execute_until: Option<String>) -> Self {
         self.execute_until = execute_until;
+        self
+    }
+
+    pub(crate) fn with_skip_commands(mut self, skip_commands: Option<Regex>) -> Self {
+        self.skip_commands = skip_commands;
         self
     }
 
@@ -38,7 +45,7 @@ struct ParserError {
 }
 
 impl Display for ParserError {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.message)
     }
 }
@@ -59,11 +66,11 @@ impl Commands {
     fn parse(options: &Options) -> Result<Self, ParserError> {
         let mut commands = vec![];
         let mut buffer_command = vec![];
+
         let mut within_command_block = false;
         let mut execute_from_found = false;
         let mut execute_until_found = false;
-
-        let aa = options.execute_from.as_deref();
+        let execute_from = options.execute_from.as_deref();
 
         for line in options.content.lines() {
             let trimmed_start_line = line.trim_start();
@@ -78,7 +85,7 @@ impl Commands {
                 continue;
             }
 
-            if let Some(from_line) = aa {
+            if let Some(from_line) = execute_from {
                 if !execute_from_found && trimmed_start_line.eq_ignore_ascii_case(from_line) {
                     execute_from_found = true;
                 } else if !execute_from_found {
@@ -89,7 +96,7 @@ impl Commands {
             if within_command_block {
                 let mut command_line = line.trim_start().to_string();
                 if command_line.starts_with("$ ") {
-                    command_line = command_line[2..].to_string();
+                    command_line = command_line[2..].trim_start().to_string();
                 }
 
                 if command_line.ends_with('\\') {
@@ -100,7 +107,16 @@ impl Commands {
                     continue;
                 }
 
-                buffer_command.push(command_line.trim_start().to_string());
+                buffer_command.push(command_line.to_string());
+
+                /* Check if the command needs to be skipped and clear the buffer if so */
+                if let Some(regex) = &options.skip_commands {
+                    if regex.is_match(&buffer_command.join(" ")) {
+                        buffer_command.clear();
+                        continue;
+                    }
+                }
+
                 commands.push(Command {
                     command: buffer_command.clone(),
                 });
@@ -117,7 +133,7 @@ impl Commands {
             }
         }
 
-        if let Some(from_line) = aa {
+        if let Some(from_line) = execute_from {
             if !execute_from_found {
                 return Err(ParserError {
                     message: format!("No line matched the execute from: '{}'", from_line),
@@ -127,7 +143,7 @@ impl Commands {
 
         if let Some(until_line) = options.execute_until.as_deref() {
             if !execute_until_found {
-                return if let Some(from_line) = aa {
+                return if let Some(from_line) = execute_from {
                     Err(ParserError {
                         message: format!(
                             "No line matched the execute until: '{}' after the execute from: '{}'",
@@ -520,6 +536,25 @@ $ echo "Line 3"
             .with_execute_until(Some("$ echo \"Line 2\"".to_string()));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""]);
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_skip_commands() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+$ echo "Hello there"
+$ echo "Line 2"
+$ echo "Line 3"
+```
+"#;
+
+        let options = Options::new(content.to_string())
+            .with_skip_commands(Some(Regex::new(r"Line \d").unwrap()));
+        let parsed = Commands::parse(&options);
+        let expected = ok_of_strs(vec!["echo \"Hello there\""]);
         assert_eq!(expected, parsed);
     }
 

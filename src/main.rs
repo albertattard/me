@@ -11,6 +11,7 @@ fn main() {
     let shell_script = Options::new(args.read_file())
         .with_execute_from(args.execute_from())
         .with_execute_until(args.execute_until())
+        .with_skip_commands(args.skip_commands())
         .build()
         .as_shell_script();
     ShellScript::new(shell_script).run();
@@ -61,6 +62,10 @@ Print some messages
 ```shell
 $ echo 'Hello 1!!'
 $ echo 'Hello 2!!'
+$ echo 'Line 1!!'
+$ echo 'Line 2!!'
+$ echo 'Line 3!!'
+$ echo 'Line 4!!'
 $ echo 'Hello 3!!'
 $ echo 'Hello 4!!'
 ```
@@ -75,6 +80,8 @@ $ echo 'Hello 4!!'
                     "$ echo 'Hello 2!!'",
                     "--execute-until",
                     "$ echo 'Hello 3!!'",
+                    "--skip-commands",
+                    "Line \\d+",
                 ])
                 .assert()
                 .stdout("Hello 2!!\nHello 3!!\n")

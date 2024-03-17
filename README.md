@@ -83,12 +83,7 @@ $ me --help
    provided. Ideally the delay is provided in the following options, either
    `###ms` (for milliseconds) or `###s` (for seconds).
 
-2. Allow for commands to be skipped when the `--skip-commands=<COMMANDS>` is
-   provided. If possible, support regular expressions so that multiple commands
-   can be skipped with little effort. More than one command input can be
-   provided using the supported format.
-
-3. Execute the commands from the same directory where the MARKDOWN file is and
+2. Execute the commands from the same directory where the MARKDOWN file is and
    not from the current directory. The working directory can be overridden using
    the `--working-directory=<PATH>` command line option. The path must be any
    existing and accessible directory.
