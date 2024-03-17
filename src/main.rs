@@ -128,7 +128,7 @@ $ echo 'Level 3'
         Command::cargo_bin("../release/me")
             .expect("Failed to create test command")
             .current_dir(dir)
-            .args(["--recursive", "2"])
+            .args(["--recursive"])
             .assert()
             .stdout("Level 1\nLevel 2\n")
             .success();

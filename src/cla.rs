@@ -40,7 +40,7 @@ pub(crate) struct Args {
 
     /// Searches for MARKDOWN files, named README.md or the provided file name, in the
     /// subdirectories and execute each MARKDOWN file from the directory it was found.
-    #[arg(short, long, display_order = 6)]
+    #[arg(short, long, num_args = 0..=1, default_missing_value = "2", display_order = 6)]
     recursive: Option<usize>,
 }
 
