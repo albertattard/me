@@ -11,8 +11,8 @@ pub(crate) struct ShellScript {
 }
 
 impl ShellScript {
-    pub(crate) fn new(commands: String) -> Self {
-        let path = Self::create_file_path();
+    pub(crate) fn new(directory: PathBuf, commands: String) -> Self {
+        let path = Self::create_file_path(directory);
 
         Self::create_shell_script(&path)
             .write_all(commands.as_bytes())
@@ -23,40 +23,46 @@ impl ShellScript {
 
     pub(crate) fn run(&self) {
         Command::new("/bin/sh")
-            .current_dir(self.current_dir())
-            .args(["-c", self.path_as_str()])
+            .current_dir(&self.current_dir())
+            .args(["-c", &self.path_as_str()])
             .spawn()
             .expect("Failed to execute process")
             .wait()
             .expect("Failed to finish process");
     }
 
-    fn path_as_str(&self) -> &str {
-        self.path
+    fn path_as_str(&self) -> String {
+        fs::canonicalize(&self.path)
+            .expect("Failed to canonicalize path")
+            .as_path()
             .as_os_str()
             .to_str()
             .expect("failed to convert path")
+            .to_string()
     }
 
     fn current_dir(&self) -> PathBuf {
-        self.path
+        fs::canonicalize(&self.path)
+            .expect("Failed to canonicalize path")
             .parent()
             .map(|path| path.to_path_buf())
             .unwrap_or_else(|| env::current_dir().expect("Failed to fetch the current directory"))
     }
 
-    fn create_file_path() -> PathBuf {
-        let since_the_epoch = SystemTime::now()
+    fn create_file_path(directory: PathBuf) -> PathBuf {
+        directory.join(format!("commands-{}.sh", Self::millis_since_epoch()))
+    }
+
+    fn millis_since_epoch() -> u128 {
+        SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards");
-        PathBuf::from(format!("./commands-{}.sh", since_the_epoch.as_millis()))
+            .expect("Time went backwards")
+            .as_millis()
     }
 
     fn create_shell_script(path: &PathBuf) -> File {
         let shell_script = File::create(path).expect("Failed to create shell script");
-
         Self::make_shell_script_executable(&shell_script);
-
         shell_script
     }
 

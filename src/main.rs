@@ -17,7 +17,8 @@ fn main() {
             .with_delay_between_commands(args.delay_between_commands())
             .build()
             .as_shell_script();
-        ShellScript::new(shell_script).run();
+
+        ShellScript::new(markdown.parent_dir(), shell_script).run();
     }
 }
 
@@ -33,33 +34,34 @@ mod tests {
     #[test]
     fn run_with_no_args() {
         let dir = "./target/fixtures/1";
-        let path = &format!("{}/README.md", dir);
-        let content = r#"
-# README
+        remove_fixtures(dir);
+        new_fixture(
+            &format!("{}/README.md", dir),
+            r#"# README Fixture
 
 Print `Hello world!!`
 
 ```shell
 $ echo 'Hello world!!'
 ```
-"#;
+"#,
+        );
 
-        Fixture::new(path, content).consume(|| {
-            Command::cargo_bin("../release/me")
-                .expect("Failed to create test command")
-                .current_dir(dir)
-                .assert()
-                .stdout("Hello world!!\n")
-                .success();
-        })
+        Command::cargo_bin("../release/me")
+            .expect("Failed to create test command")
+            .current_dir(dir)
+            .assert()
+            .stdout("Hello world!!\n")
+            .success();
     }
 
     #[test]
-    fn run_with_all_args() {
+    fn run_with_some_args() {
         let dir = "./target/fixtures/2";
-        let path = &format!("{}/README.md", dir);
-        let content = r#"
-# README
+        remove_fixtures(dir);
+        new_fixture(
+            &format!("{}/README.md", dir),
+            r#"# README Fixture
 
 Print some messages
 
@@ -73,62 +75,84 @@ $ echo 'Line 4!!'
 $ echo 'Hello 3!!'
 $ echo 'Hello 4!!'
 ```
-"#;
+"#,
+        );
 
-        Fixture::new(path, content).consume(|| {
-            Command::cargo_bin("../release/me")
-                .expect("Failed to create test command")
-                .current_dir(dir)
-                .args([
-                    "--execute-from",
-                    "$ echo 'Hello 2!!'",
-                    "--execute-until",
-                    "$ echo 'Hello 3!!'",
-                    "--skip-commands",
-                    "Line \\d+",
-                ])
-                .assert()
-                .stdout("Hello 2!!\nHello 3!!\n")
-                .success();
-        });
+        Command::cargo_bin("../release/me")
+            .expect("Failed to create test command")
+            .current_dir(dir)
+            .args([
+                "--execute-from",
+                "$ echo 'Hello 2!!'",
+                "--execute-until",
+                "$ echo 'Hello 3!!'",
+                "--skip-commands",
+                "Line \\d+",
+            ])
+            .assert()
+            .stdout("Hello 2!!\nHello 3!!\n")
+            .success();
     }
 
-    struct Fixture {
-        path: String,
+    #[test]
+    fn run_with_recursive_args() {
+        let dir = "./target/fixtures/3";
+        remove_fixtures(dir);
+        new_fixture(
+            &format!("{}/README.md", dir),
+            r#"# README Fixture
+```shell
+$ echo 'Level 1'
+```
+"#,
+        );
+
+        new_fixture(
+            &format!("{}/a/README.md", dir),
+            r#"# README Fixture
+```shell
+$ echo 'Level 2'
+```
+"#,
+        );
+
+        new_fixture(
+            &format!("{}/a/b/README.md", dir),
+            r#"# README Fixture
+```shell
+$ echo 'Level 3'
+```
+"#,
+        );
+
+        Command::cargo_bin("../release/me")
+            .expect("Failed to create test command")
+            .current_dir(dir)
+            .args(["--recursive", "2"])
+            .assert()
+            .stdout("Level 1\nLevel 2\n")
+            .success();
     }
 
-    impl Fixture {
-        fn new(path: &str, content: &str) -> Self {
-            let p = Path::new(path);
+    fn new_fixture(fixture_path: &str, content: &str) {
+        let path = Path::new(fixture_path);
 
-            if let Some(parent) = p.parent() {
-                fs::create_dir_all(parent)
-                    .expect("Failed to create the missing parent directories");
-            }
-
-            File::create(p)
-                .expect("Failed to create test fixture")
-                .write_all(content.as_bytes())
-                .expect("Failed to write content to test fixture");
-
-            Fixture {
-                path: path.to_string(),
-            }
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("Failed to create the missing parent directories");
         }
 
-        fn consume<F>(self, f: F)
-        where
-            F: FnOnce(),
-        {
-            f()
-        }
+        File::create(path)
+            .expect("Failed to create test fixture")
+            .write_all(content.as_bytes())
+            .expect("Failed to write content to test fixture");
     }
 
-    impl Drop for Fixture {
-        fn drop(&mut self) {
-            if fs::remove_file(&self.path).is_err() {
-                eprintln!("Failed to delete the fixture");
-            }
+    fn remove_fixtures<P>(directory: P)
+    where
+        P: AsRef<Path>,
+    {
+        if directory.as_ref().exists() {
+            fs::remove_dir_all(directory).expect("Failed to remove all fixtures");
         }
     }
 }

@@ -44,6 +44,7 @@ $ me --help
    `1.76`.
 
    ```shell
+   $ cargo clean
    $ cargo fmt
    $ cargo clippy
    $ cargo build --release
