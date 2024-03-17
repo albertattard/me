@@ -1,5 +1,6 @@
-use regex::Regex;
 use std::fmt::{Debug, Display, Formatter};
+
+use regex::Regex;
 
 #[derive(Debug)]
 pub(crate) struct Options {

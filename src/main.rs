@@ -8,14 +8,17 @@ mod shell;
 
 fn main() {
     let args = Args::create();
-    let shell_script = Options::new(args.read_file())
-        .with_execute_from(args.execute_from())
-        .with_execute_until(args.execute_until())
-        .with_skip_commands(args.skip_commands())
-        .with_delay_between_commands(args.delay_between_commands())
-        .build()
-        .as_shell_script();
-    ShellScript::new(shell_script).run();
+
+    for markdown in args.files() {
+        let shell_script = Options::new(markdown.read())
+            .with_execute_from(args.execute_from())
+            .with_execute_until(args.execute_until())
+            .with_skip_commands(args.skip_commands())
+            .with_delay_between_commands(args.delay_between_commands())
+            .build()
+            .as_shell_script();
+        ShellScript::new(shell_script).run();
+    }
 }
 
 #[cfg(test)]

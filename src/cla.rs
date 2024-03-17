@@ -1,7 +1,8 @@
-use clap::Parser;
-use regex::Regex;
 use std::fs::read_to_string;
 use std::path::PathBuf;
+
+use clap::Parser;
+use regex::Regex;
 
 /// A simple application that parses markdown files and executes the shell code blocks.
 #[derive(Parser, Debug)]
@@ -56,12 +57,33 @@ impl Args {
         self.delay_between_commands
     }
 
-    pub(crate) fn read_file(&self) -> String {
-        read_to_string(self.file_path())
-            .unwrap_or_else(|_| panic!("Failed to read MARKDOWN file: {}", self.file_name))
+    pub(crate) fn files(&self) -> Vec<MarkdownFile> {
+        vec![MarkdownFile::new(self.file_path())]
     }
 
     fn file_path(&self) -> PathBuf {
         PathBuf::from(&self.file_name)
+    }
+}
+
+pub(crate) struct MarkdownFile {
+    path: PathBuf,
+}
+
+impl MarkdownFile {
+    fn new(path: PathBuf) -> Self {
+        MarkdownFile { path }
+    }
+
+    pub(crate) fn read(&self) -> String {
+        read_to_string(&self.path)
+            .unwrap_or_else(|_| panic!("Failed to read MARKDOWN file: {}", self.path_as_str()))
+    }
+
+    fn path_as_str(&self) -> &str {
+        self.path
+            .as_os_str()
+            .to_str()
+            .expect("failed to convert path")
     }
 }
