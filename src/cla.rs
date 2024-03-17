@@ -3,8 +3,9 @@ use regex::Regex;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 
+/// A simple application that parses markdown files and executes the shell code blocks.
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(author, version, about, long_about = None)]
 pub(crate) struct Args {
     /// Name of the MARKDOWN file to parse
     #[arg(short, long, default_value = "README.md", display_order = 1)]
@@ -28,6 +29,10 @@ pub(crate) struct Args {
     /// regular expression does not match any commands.
     #[arg(short, long, display_order = 4)]
     skip_commands: Option<Regex>,
+
+    /// Introduce a delay (in milliseconds) between each command
+    #[arg(short, long, display_order = 5)]
+    delay_between_commands: Option<u32>,
 }
 
 impl Args {
@@ -45,6 +50,10 @@ impl Args {
 
     pub(crate) fn skip_commands(&self) -> Option<Regex> {
         self.skip_commands.clone()
+    }
+
+    pub(crate) fn delay_between_commands(&self) -> Option<u32> {
+        self.delay_between_commands
     }
 
     pub(crate) fn read_file(&self) -> String {

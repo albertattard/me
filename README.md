@@ -71,7 +71,7 @@ $ me --help
      --silent \
      --location \
      --output "${HOME}/.local/bin/me" \
-     'https://github.com/albertattard/me/releases/download/20240227.205131/me'
+     'https://github.com/albertattard/me/releases/download/20240317.110501/me'
    $ chmod +x "${HOME}/.local/bin/me"
    $ sudo rm -f '/usr/local/bin/me'
    $ sudo ln -s "${HOME}/.local/bin/me" '/usr/local/bin/me'

@@ -7,6 +7,7 @@ pub(crate) struct Options {
     execute_from: Option<String>,
     execute_until: Option<String>,
     skip_commands: Option<Regex>,
+    delay_between_commands: Option<u32>,
 }
 
 impl Options {
@@ -16,6 +17,7 @@ impl Options {
             execute_from: None,
             execute_until: None,
             skip_commands: None,
+            delay_between_commands: None,
         }
     }
 
@@ -31,6 +33,14 @@ impl Options {
 
     pub(crate) fn with_skip_commands(mut self, skip_commands: Option<Regex>) -> Self {
         self.skip_commands = skip_commands;
+        self
+    }
+
+    pub(crate) fn with_delay_between_commands(
+        mut self,
+        delay_between_commands: Option<u32>,
+    ) -> Self {
+        self.delay_between_commands = delay_between_commands;
         self
     }
 
@@ -155,6 +165,19 @@ impl Commands {
                         message: format!("No line matched the execute until: '{}'", until_line),
                     })
                 };
+            }
+        }
+
+        if let Some(delay_in_millis) = options.delay_between_commands {
+            let mut index = commands.len() - 1;
+            while index > 0 {
+                commands.insert(
+                    index,
+                    Command {
+                        command: vec![format!("sleep {}", delay_in_millis)],
+                    },
+                );
+                index -= 1;
             }
         }
 
@@ -555,6 +578,29 @@ $ echo "Line 3"
             .with_skip_commands(Some(Regex::new(r"Line \d").unwrap()));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Hello there\""]);
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_delay_between_commands() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+```
+"#;
+
+        let options = Options::new(content.to_string()).with_delay_between_commands(Some(100));
+        let parsed = Commands::parse(&options);
+        let expected = ok_of_strs(vec![
+            "echo \"Line 1\"",
+            "sleep 100",
+            "echo \"Line 2\"",
+            "sleep 100",
+            "echo \"Line 3\"",
+        ]);
         assert_eq!(expected, parsed);
     }
 

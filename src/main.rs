@@ -12,6 +12,7 @@ fn main() {
         .with_execute_from(args.execute_from())
         .with_execute_until(args.execute_until())
         .with_skip_commands(args.skip_commands())
+        .with_delay_between_commands(args.delay_between_commands())
         .build()
         .as_shell_script();
     ShellScript::new(shell_script).run();
