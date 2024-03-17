@@ -5,6 +5,7 @@ use std::fmt::{Debug, Display, Formatter};
 pub(crate) struct Options {
     content: String,
     execute_from: Option<String>,
+    execute_until: Option<String>,
 }
 
 impl Options {
@@ -12,11 +13,17 @@ impl Options {
         Options {
             content,
             execute_from: None,
+            execute_until: None,
         }
     }
 
     pub(crate) fn with_execute_from(mut self, execute_from: Option<String>) -> Self {
         self.execute_from = execute_from;
+        self
+    }
+
+    pub(crate) fn with_execute_until(mut self, execute_until: Option<String>) -> Self {
+        self.execute_until = execute_until;
         self
     }
 
@@ -53,26 +60,30 @@ impl Commands {
         let mut commands = vec![];
         let mut buffer_command = vec![];
         let mut within_command_block = false;
-        let mut include_line = false;
+        let mut execute_from_found = false;
+        let mut execute_until_found = false;
+
+        let aa = options.execute_from.as_deref();
 
         for line in options.content.lines() {
-            if line.trim().eq("```shell") {
+            let trimmed_start_line = line.trim_start();
+
+            if trimmed_start_line.eq("```shell") {
                 within_command_block = true;
                 continue;
             }
 
-            if line.trim().eq("```") {
+            if trimmed_start_line.eq("```") {
                 within_command_block = false;
                 continue;
             }
 
-            include_line = include_line
-                || options
-                    .execute_from
-                    .as_deref()
-                    .map_or(true, |m| line.eq_ignore_ascii_case(m));
-            if !include_line {
-                continue;
+            if let Some(from_line) = aa {
+                if !execute_from_found && trimmed_start_line.eq_ignore_ascii_case(from_line) {
+                    execute_from_found = true;
+                } else if !execute_from_found {
+                    continue;
+                }
             }
 
             if within_command_block {
@@ -95,13 +106,39 @@ impl Commands {
                 });
                 buffer_command.clear();
             }
+
+            if options
+                .execute_until
+                .as_deref()
+                .map_or(false, |m| trimmed_start_line.eq_ignore_ascii_case(m))
+            {
+                execute_until_found = true;
+                break;
+            }
         }
 
-        if let Some(line) = options.execute_from.as_deref() {
-            if !include_line {
+        if let Some(from_line) = aa {
+            if !execute_from_found {
                 return Err(ParserError {
-                    message: format!("No line matched the execute from: '{}'", line),
+                    message: format!("No line matched the execute from: '{}'", from_line),
                 });
+            }
+        }
+
+        if let Some(until_line) = options.execute_until.as_deref() {
+            if !execute_until_found {
+                return if let Some(from_line) = aa {
+                    Err(ParserError {
+                        message: format!(
+                            "No line matched the execute until: '{}' after the execute from: '{}'",
+                            until_line, from_line
+                        ),
+                    })
+                } else {
+                    Err(ParserError {
+                        message: format!("No line matched the execute until: '{}'", until_line),
+                    })
+                };
             }
         }
 
@@ -353,12 +390,136 @@ $ echo "Line 3"
 ```
 "#;
 
-        let line = "$ echo \"Line x\"";
-        let options = Options::new(content.to_string()).with_execute_from(Some(line.to_string()));
+        let from_line = "$ echo \"Line x\"";
+        let options =
+            Options::new(content.to_string()).with_execute_from(Some(from_line.to_string()));
         let parsed = Commands::parse(&options);
         let expected = Err(ParserError {
-            message: format!("No line matched the execute from: '{}'", line),
+            message: format!("No line matched the execute from: '{}'", from_line),
         });
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_execute_until() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+```
+"#;
+
+        let options = Options::new(content.to_string())
+            .with_execute_until(Some("$ echo \"Line 2\"".to_string()));
+        let parsed = Commands::parse(&options);
+        let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""]);
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_execute_until_when_no_lines_match() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+```
+"#;
+
+        let until_line = "$ echo \"Line x\"";
+        let options =
+            Options::new(content.to_string()).with_execute_until(Some(until_line.to_string()));
+        let parsed = Commands::parse(&options);
+        let expected = Err(ParserError {
+            message: format!("No line matched the execute until: '{}'", until_line),
+        });
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_execute_from_and_until() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+$ echo "Line 4"
+```
+"#;
+
+        let options = Options::new(content.to_string())
+            .with_execute_from(Some("$ echo \"Line 2\"".to_string()))
+            .with_execute_until(Some("$ echo \"Line 3\"".to_string()));
+        let parsed = Commands::parse(&options);
+        let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_execute_from_and_until_same_line() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+```
+"#;
+
+        let options = Options::new(content.to_string())
+            .with_execute_from(Some("$ echo \"Line 1\"".to_string()))
+            .with_execute_until(Some("$ echo \"Line 1\"".to_string()));
+        let parsed = Commands::parse(&options);
+        let expected = ok_of_strs(vec!["echo \"Line 1\""]);
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_execute_from_and_until_when_no_lines_match_until() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+$ echo "Line 4"
+```
+"#;
+
+        let from_line = "$ echo \"Line 2\"";
+        let until_line = "$ echo \"Line 1\"";
+        let options = Options::new(content.to_string())
+            .with_execute_from(Some(from_line.to_string()))
+            .with_execute_until(Some(until_line.to_string()));
+        let parsed = Commands::parse(&options);
+        let expected = Err(ParserError {
+            message: format!(
+                "No line matched the execute until: '{}' after the execute from: '{}'",
+                until_line, from_line
+            ),
+        });
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_execute_from_and_until_when_until_also_exists_before_from() {
+        let content = r#"
+# README
+```shell
+$ echo "Line 2"
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+```
+"#;
+
+        let options = Options::new(content.to_string())
+            .with_execute_from(Some("$ echo \"Line 1\"".to_string()))
+            .with_execute_until(Some("$ echo \"Line 2\"".to_string()));
+        let parsed = Commands::parse(&options);
+        let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""]);
         assert_eq!(expected, parsed);
     }
 

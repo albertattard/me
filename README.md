@@ -92,13 +92,3 @@ $ me --help
    not from the current directory. The working directory can be overridden using
    the `--working-directory=<PATH>` command line option. The path must be any
    existing and accessible directory.
-
-4. Allow execution of parts of the MARKDOWN file by using the
-   `--execute-from=<COMMAND>` and `--execute-until=<COMMAND>`. These options can
-   be used independently and together and is ideal when debugging a MARKDOWN
-   file. When the `--execute-from=<COMMAND>` is provided, the
-   `--execute-until=<COMMAND>` will match the first command after the one
-   matched by `--execute-from=<COMMAND>`. The parser will fail if no commands
-   match, in either case. In the event of multiple commands matching, the first
-   one is used. If possible, support regular expressions so that multiple
-   commands can be skipped with little effort.

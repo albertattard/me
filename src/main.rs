@@ -10,6 +10,7 @@ fn main() {
     let args = Args::create();
     let shell_script = Options::new(args.read_file())
         .with_execute_from(args.execute_from())
+        .with_execute_until(args.execute_until())
         .build()
         .as_shell_script();
     ShellScript::new(shell_script).run();
@@ -49,22 +50,19 @@ $ echo 'Hello world!!'
     }
 
     #[test]
-    fn run_with_execute_from() {
+    fn run_with_all_args() {
         let dir = "./target/fixtures/2";
         let path = &format!("{}/README.md", dir);
         let content = r#"
 # README
 
-Print `Hello world!!`
+Print some messages
 
 ```shell
-$ echo 'Hello world!!'
-```
-
-Print `Hello there!!`
-
-```shell
-$ echo 'Hello there!!'
+$ echo 'Hello 1!!'
+$ echo 'Hello 2!!'
+$ echo 'Hello 3!!'
+$ echo 'Hello 4!!'
 ```
 "#;
 
@@ -72,9 +70,14 @@ $ echo 'Hello there!!'
             Command::cargo_bin("../release/me")
                 .expect("Failed to create test command")
                 .current_dir(dir)
-                .args(["--execute-from", "Print `Hello there!!`"])
+                .args([
+                    "--execute-from",
+                    "$ echo 'Hello 2!!'",
+                    "--execute-until",
+                    "$ echo 'Hello 3!!'",
+                ])
                 .assert()
-                .stdout("Hello there!!\n")
+                .stdout("Hello 2!!\nHello 3!!\n")
                 .success();
         });
     }

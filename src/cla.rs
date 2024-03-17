@@ -15,6 +15,13 @@ pub(crate) struct Args {
     /// the first matching line.
     #[arg(short, long)]
     execute_from: Option<String>,
+
+    /// Executes until the given command, or line within the file.  When provided, anything after
+    /// this line is ignored.  The matching command is not ignored.  If no matching lines are found,
+    /// then the program will panic.  If more than one line matches, the program will stop at the
+    /// first matching line.
+    #[arg(short, long)]
+    execute_until: Option<String>,
 }
 
 impl Args {
@@ -24,6 +31,10 @@ impl Args {
 
     pub(crate) fn execute_from(&self) -> Option<String> {
         self.execute_from.clone()
+    }
+
+    pub(crate) fn execute_until(&self) -> Option<String> {
+        self.execute_until.clone()
     }
 
     pub(crate) fn read_file(&self) -> String {
