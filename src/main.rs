@@ -108,7 +108,7 @@ $ echo 'Hello 4!!'
 
             File::create(p)
                 .expect("Failed to create test fixture")
-                .write(content.as_bytes())
+                .write_all(content.as_bytes())
                 .expect("Failed to write content to test fixture");
 
             Fixture {

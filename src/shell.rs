@@ -1,10 +1,10 @@
-use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{env, fs};
 
 pub(crate) struct ShellScript {
     path: PathBuf,
@@ -23,6 +23,7 @@ impl ShellScript {
 
     pub(crate) fn run(&self) {
         Command::new("/bin/sh")
+            .current_dir(self.current_dir())
             .args(["-c", self.path_as_str()])
             .spawn()
             .expect("Failed to execute process")
@@ -35,6 +36,13 @@ impl ShellScript {
             .as_os_str()
             .to_str()
             .expect("failed to convert path")
+    }
+
+    fn current_dir(&self) -> PathBuf {
+        self.path
+            .parent()
+            .map(|path| path.to_path_buf())
+            .unwrap_or_else(|| env::current_dir().expect("Failed to fetch the current directory"))
     }
 
     fn create_file_path() -> PathBuf {
