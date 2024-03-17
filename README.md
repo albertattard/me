@@ -41,7 +41,7 @@ $ me --help
 
    This application is developed with the
    [rust](https://www.rust-lang.org/tools/install) programming language, version
-   `1.74`.
+   `1.76`.
 
    ```shell
    $ cargo fmt
@@ -71,19 +71,8 @@ $ me --help
      --silent \
      --location \
      --output "${HOME}/.local/bin/me" \
-     'https://github.com/albertattard/me/releases/download/20240317.110501/me'
+     'https://github.com/albertattard/me/releases/download/20240317.122350/me'
    $ chmod +x "${HOME}/.local/bin/me"
    $ sudo rm -f '/usr/local/bin/me'
    $ sudo ln -s "${HOME}/.local/bin/me" '/usr/local/bin/me'
    ```
-
-# Pending
-
-1. Add a delay between commands when the `--delay-between-commands=<DELAY>` is
-   provided. Ideally the delay is provided in the following options, either
-   `###ms` (for milliseconds) or `###s` (for seconds).
-
-2. Execute the commands from the same directory where the MARKDOWN file is and
-   not from the current directory. The working directory can be overridden using
-   the `--working-directory=<PATH>` command line option. The path must be any
-   existing and accessible directory.
