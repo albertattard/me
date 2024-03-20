@@ -6,7 +6,7 @@ use regex::Regex;
 pub(crate) struct Options<'a> {
     content: String,
     execute_from: Option<&'a str>,
-    execute_until: Option<String>,
+    execute_until: Option<&'a str>,
     skip_commands: Option<Regex>,
     delay_between_commands: Option<u32>,
 }
@@ -27,7 +27,7 @@ impl<'a> Options<'a> {
         self
     }
 
-    pub(crate) fn with_execute_until(mut self, execute_until: Option<String>) -> Self {
+    pub(crate) fn with_execute_until(mut self, execute_until: Option<&'a str>) -> Self {
         self.execute_until = execute_until;
         self
     }
@@ -138,7 +138,6 @@ impl Commands {
 
             if options
                 .execute_until
-                .as_deref()
                 .map_or(false, |m| trimmed_start_line.eq_ignore_ascii_case(m))
             {
                 execute_until_found = true;
@@ -154,7 +153,7 @@ impl Commands {
             }
         }
 
-        if let Some(until_line) = options.execute_until.as_deref() {
+        if let Some(until_line) = options.execute_until {
             if !execute_until_found {
                 return if let Some(from_line) = execute_from {
                     Err(ParserError {
@@ -481,8 +480,8 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options = Options::new(content.to_string())
-            .with_execute_until(Some("$ echo \"Line 2\"".to_string()));
+        let options =
+            Options::new(content.to_string()).with_execute_until(Some("$ echo \"Line 2\""));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""]);
         assert_eq!(expected, parsed);
@@ -500,8 +499,7 @@ $ echo "Line 3"
 "#;
 
         let until_line = "$ echo \"Line x\"";
-        let options =
-            Options::new(content.to_string()).with_execute_until(Some(until_line.to_string()));
+        let options = Options::new(content.to_string()).with_execute_until(Some(until_line));
         let parsed = Commands::parse(&options);
         let expected = Err(ParserError {
             message: format!("No line matched the execute until: '{}'", until_line),
@@ -523,7 +521,7 @@ $ echo "Line 4"
 
         let options = Options::new(content.to_string())
             .with_execute_from(Some("$ echo \"Line 2\""))
-            .with_execute_until(Some("$ echo \"Line 3\"".to_string()));
+            .with_execute_until(Some("$ echo \"Line 3\""));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
         assert_eq!(expected, parsed);
@@ -540,7 +538,7 @@ $ echo "Line 1"
 
         let options = Options::new(content.to_string())
             .with_execute_from(Some("$ echo \"Line 1\""))
-            .with_execute_until(Some("$ echo \"Line 1\"".to_string()));
+            .with_execute_until(Some("$ echo \"Line 1\""));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 1\""]);
         assert_eq!(expected, parsed);
@@ -562,7 +560,7 @@ $ echo "Line 4"
         let until_line = "$ echo \"Line 1\"";
         let options = Options::new(content.to_string())
             .with_execute_from(Some(from_line))
-            .with_execute_until(Some(until_line.to_string()));
+            .with_execute_until(Some(until_line));
         let parsed = Commands::parse(&options);
         let expected = Err(ParserError {
             message: format!(
@@ -587,7 +585,7 @@ $ echo "Line 3"
 
         let options = Options::new(content.to_string())
             .with_execute_from(Some("$ echo \"Line 1\""))
-            .with_execute_until(Some("$ echo \"Line 2\"".to_string()));
+            .with_execute_until(Some("$ echo \"Line 2\""));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""]);
         assert_eq!(expected, parsed);

@@ -53,8 +53,8 @@ impl Args {
         self.execute_from.as_deref()
     }
 
-    pub(crate) fn execute_until(&self) -> Option<String> {
-        self.execute_until.clone()
+    pub(crate) fn execute_until(&self) -> Option<&str> {
+        self.execute_until.as_deref()
     }
 
     pub(crate) fn skip_commands(&self) -> Option<Regex> {
