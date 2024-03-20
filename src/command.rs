@@ -234,37 +234,9 @@ impl Display for Commands {
     }
 }
 
-impl Iterator for Commands {
-    type Item = Command;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.commands.is_empty() {
-            None
-        } else {
-            Some(self.commands.remove(0))
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn empty_iterator() {
-        let commands = empty();
-        let expected = vec![];
-        assert_eq!(commands.into_iter().collect::<Vec<_>>(), expected);
-    }
-
-    #[test]
-    fn non_empty_iterator() {
-        let commands = of_strs(vec!["echo \"Hello world\""]);
-        let expected = vec![Command {
-            command: vec!["echo \"Hello world\"".to_string()],
-        }];
-        assert_eq!(commands.into_iter().collect::<Vec<_>>(), expected);
-    }
 
     #[test]
     fn parse_empty_content() {
