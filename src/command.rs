@@ -4,7 +4,7 @@ use regex::Regex;
 
 #[derive(Debug)]
 pub(crate) struct Options<'a> {
-    content: String,
+    content: &'a str,
     execute_from: Option<&'a str>,
     execute_until: Option<&'a str>,
     skip_commands: Option<&'a Regex>,
@@ -12,7 +12,7 @@ pub(crate) struct Options<'a> {
 }
 
 impl<'a> Options<'a> {
-    pub(crate) fn new(content: String) -> Self {
+    pub(crate) fn new(content: &'a str) -> Self {
         Options {
             content,
             execute_from: None,
@@ -262,7 +262,7 @@ mod tests {
     #[test]
     fn parse_empty_content() {
         let content = "";
-        let options = Options::new(content.to_string());
+        let options = Options::new(content);
         let parsed = Commands::parse(&options);
         let expected = ok_empty();
         assert_eq!(expected, parsed);
@@ -276,7 +276,7 @@ mod tests {
 No commands here!!
 "#;
 
-        let options = Options::new(content.to_string());
+        let options = Options::new(content);
         let parsed = Commands::parse(&options);
         let expected = ok_empty();
         assert_eq!(expected, parsed);
@@ -296,7 +296,7 @@ $ ls -la
 After command
 "#;
 
-        let options = Options::new(content.to_string());
+        let options = Options::new(content);
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["ls -la"]);
         assert_eq!(expected, parsed);
@@ -321,7 +321,7 @@ $ echo "Goodbye"
 
 "#;
 
-        let options = Options::new(content.to_string());
+        let options = Options::new(content);
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
         assert_eq!(expected, parsed);
@@ -349,7 +349,7 @@ $ echo "Hello"
      ```
 "#;
 
-        let options = Options::new(content.to_string());
+        let options = Options::new(content);
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
         assert_eq!(expected, parsed);
@@ -365,7 +365,7 @@ $ java \
 ```
 "#;
 
-        let options = Options::new(content.to_string());
+        let options = Options::new(content);
         let parsed = Commands::parse(&options);
         let expected = Ok(Commands {
             commands: vec![Command {
@@ -386,7 +386,7 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options = Options::new(content.to_string());
+        let options = Options::new(content);
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec![
             "echo \"Line 1\"",
@@ -410,7 +410,7 @@ $ echo "After"
 ```
 "#;
 
-        let options = Options::new(content.to_string());
+        let options = Options::new(content);
         let parsed = Commands::parse(&options);
         let expected = Ok(Commands {
             commands: vec![
@@ -442,8 +442,7 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options =
-            Options::new(content.to_string()).with_execute_from(Some("$ echo \"Line 2\""));
+        let options = Options::new(content).with_execute_from(Some("$ echo \"Line 2\""));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
         assert_eq!(expected, parsed);
@@ -461,7 +460,7 @@ $ echo "Line 3"
 "#;
 
         let from_line = "$ echo \"Line x\"";
-        let options = Options::new(content.to_string()).with_execute_from(Some(from_line));
+        let options = Options::new(content).with_execute_from(Some(from_line));
         let parsed = Commands::parse(&options);
         let expected = Err(ParserError {
             message: format!("No line matched the execute from: '{}'", from_line),
@@ -480,8 +479,7 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options =
-            Options::new(content.to_string()).with_execute_until(Some("$ echo \"Line 2\""));
+        let options = Options::new(content).with_execute_until(Some("$ echo \"Line 2\""));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""]);
         assert_eq!(expected, parsed);
@@ -499,7 +497,7 @@ $ echo "Line 3"
 "#;
 
         let until_line = "$ echo \"Line x\"";
-        let options = Options::new(content.to_string()).with_execute_until(Some(until_line));
+        let options = Options::new(content).with_execute_until(Some(until_line));
         let parsed = Commands::parse(&options);
         let expected = Err(ParserError {
             message: format!("No line matched the execute until: '{}'", until_line),
@@ -519,7 +517,7 @@ $ echo "Line 4"
 ```
 "#;
 
-        let options = Options::new(content.to_string())
+        let options = Options::new(content)
             .with_execute_from(Some("$ echo \"Line 2\""))
             .with_execute_until(Some("$ echo \"Line 3\""));
         let parsed = Commands::parse(&options);
@@ -536,7 +534,7 @@ $ echo "Line 1"
 ```
 "#;
 
-        let options = Options::new(content.to_string())
+        let options = Options::new(content)
             .with_execute_from(Some("$ echo \"Line 1\""))
             .with_execute_until(Some("$ echo \"Line 1\""));
         let parsed = Commands::parse(&options);
@@ -558,7 +556,7 @@ $ echo "Line 4"
 
         let from_line = "$ echo \"Line 2\"";
         let until_line = "$ echo \"Line 1\"";
-        let options = Options::new(content.to_string())
+        let options = Options::new(content)
             .with_execute_from(Some(from_line))
             .with_execute_until(Some(until_line));
         let parsed = Commands::parse(&options);
@@ -583,7 +581,7 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options = Options::new(content.to_string())
+        let options = Options::new(content)
             .with_execute_from(Some("$ echo \"Line 1\""))
             .with_execute_until(Some("$ echo \"Line 2\""));
         let parsed = Commands::parse(&options);
@@ -604,7 +602,7 @@ $ echo "Line 3"
 "#;
 
         let skip_commands = Regex::new(r"Line \d").expect("Invalid skip commands regex");
-        let options = Options::new(content.to_string()).with_skip_commands(Some(&skip_commands));
+        let options = Options::new(content).with_skip_commands(Some(&skip_commands));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Hello there\""]);
         assert_eq!(expected, parsed);
@@ -621,7 +619,7 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options = Options::new(content.to_string()).with_delay_between_commands(Some(100));
+        let options = Options::new(content).with_delay_between_commands(Some(100));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec![
             "echo \"Line 1\"",

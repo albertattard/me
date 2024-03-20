@@ -12,7 +12,7 @@ fn main() {
     let args = Args::create();
 
     for markdown in args.files() {
-        let shell_script = Options::new(markdown.read())
+        let shell_script = Options::new(&markdown.read())
             .with_execute_from(args.execute_from())
             .with_execute_until(args.execute_until())
             .with_skip_commands(args.skip_commands())
