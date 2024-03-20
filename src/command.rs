@@ -3,15 +3,15 @@ use std::fmt::{Debug, Display, Formatter};
 use regex::Regex;
 
 #[derive(Debug)]
-pub(crate) struct Options {
+pub(crate) struct Options<'a> {
     content: String,
-    execute_from: Option<String>,
+    execute_from: Option<&'a str>,
     execute_until: Option<String>,
     skip_commands: Option<Regex>,
     delay_between_commands: Option<u32>,
 }
 
-impl Options {
+impl<'a> Options<'a> {
     pub(crate) fn new(content: String) -> Self {
         Options {
             content,
@@ -22,7 +22,7 @@ impl Options {
         }
     }
 
-    pub(crate) fn with_execute_from(mut self, execute_from: Option<String>) -> Self {
+    pub(crate) fn with_execute_from(mut self, execute_from: Option<&'a str>) -> Self {
         self.execute_from = execute_from;
         self
     }
@@ -76,14 +76,14 @@ pub(crate) struct Commands {
 }
 
 impl Commands {
-    fn parse(options: &Options) -> Result<Self, ParserError> {
+    fn parse(options: &Options<'_>) -> Result<Self, ParserError> {
         let mut commands = vec![];
         let mut buffer_command = vec![];
 
         let mut within_command_block = false;
         let mut execute_from_found = false;
         let mut execute_until_found = false;
-        let execute_from = options.execute_from.as_deref();
+        let execute_from = options.execute_from;
 
         for line in options.content.lines() {
             let trimmed_start_line = line.trim_start();
@@ -443,8 +443,8 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options = Options::new(content.to_string())
-            .with_execute_from(Some("$ echo \"Line 2\"".to_string()));
+        let options =
+            Options::new(content.to_string()).with_execute_from(Some("$ echo \"Line 2\""));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
         assert_eq!(expected, parsed);
@@ -462,8 +462,7 @@ $ echo "Line 3"
 "#;
 
         let from_line = "$ echo \"Line x\"";
-        let options =
-            Options::new(content.to_string()).with_execute_from(Some(from_line.to_string()));
+        let options = Options::new(content.to_string()).with_execute_from(Some(from_line));
         let parsed = Commands::parse(&options);
         let expected = Err(ParserError {
             message: format!("No line matched the execute from: '{}'", from_line),
@@ -523,7 +522,7 @@ $ echo "Line 4"
 "#;
 
         let options = Options::new(content.to_string())
-            .with_execute_from(Some("$ echo \"Line 2\"".to_string()))
+            .with_execute_from(Some("$ echo \"Line 2\""))
             .with_execute_until(Some("$ echo \"Line 3\"".to_string()));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
@@ -540,7 +539,7 @@ $ echo "Line 1"
 "#;
 
         let options = Options::new(content.to_string())
-            .with_execute_from(Some("$ echo \"Line 1\"".to_string()))
+            .with_execute_from(Some("$ echo \"Line 1\""))
             .with_execute_until(Some("$ echo \"Line 1\"".to_string()));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 1\""]);
@@ -562,7 +561,7 @@ $ echo "Line 4"
         let from_line = "$ echo \"Line 2\"";
         let until_line = "$ echo \"Line 1\"";
         let options = Options::new(content.to_string())
-            .with_execute_from(Some(from_line.to_string()))
+            .with_execute_from(Some(from_line))
             .with_execute_until(Some(until_line.to_string()));
         let parsed = Commands::parse(&options);
         let expected = Err(ParserError {
@@ -587,7 +586,7 @@ $ echo "Line 3"
 "#;
 
         let options = Options::new(content.to_string())
-            .with_execute_from(Some("$ echo \"Line 1\"".to_string()))
+            .with_execute_from(Some("$ echo \"Line 1\""))
             .with_execute_until(Some("$ echo \"Line 2\"".to_string()));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""]);

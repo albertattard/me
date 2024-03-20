@@ -49,8 +49,8 @@ impl Args {
         Args::parse()
     }
 
-    pub(crate) fn execute_from(&self) -> Option<String> {
-        self.execute_from.clone()
+    pub(crate) fn execute_from(&self) -> Option<&str> {
+        self.execute_from.as_deref()
     }
 
     pub(crate) fn execute_until(&self) -> Option<String> {
