@@ -20,7 +20,7 @@ fn main() {
             .build()
             .as_shell_script();
 
-        ShellScript::new(markdown.parent_dir(), &shell_script).run();
+        ShellScript::new(&markdown.parent_dir(), &shell_script).run();
     }
 }
 
