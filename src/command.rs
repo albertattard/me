@@ -255,8 +255,8 @@ mod tests {
     #[test]
     fn empty_iterator() {
         let commands = empty();
-        let expected = vec![].into_iter();
-        assert!(commands.eq(expected));
+        let expected = vec![];
+        assert_eq!(commands.into_iter().collect::<Vec<_>>(), expected);
     }
 
     #[test]
@@ -264,9 +264,8 @@ mod tests {
         let commands = of_strs(vec!["echo \"Hello world\""]);
         let expected = vec![Command {
             command: vec!["echo \"Hello world\"".to_string()],
-        }]
-        .into_iter();
-        assert!(commands.eq(expected));
+        }];
+        assert_eq!(commands.into_iter().collect::<Vec<_>>(), expected);
     }
 
     #[test]
