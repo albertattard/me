@@ -7,7 +7,7 @@ pub(crate) struct Options<'a> {
     content: String,
     execute_from: Option<&'a str>,
     execute_until: Option<&'a str>,
-    skip_commands: Option<Regex>,
+    skip_commands: Option<&'a Regex>,
     delay_between_commands: Option<u32>,
 }
 
@@ -32,7 +32,7 @@ impl<'a> Options<'a> {
         self
     }
 
-    pub(crate) fn with_skip_commands(mut self, skip_commands: Option<Regex>) -> Self {
+    pub(crate) fn with_skip_commands(mut self, skip_commands: Option<&'a Regex>) -> Self {
         self.skip_commands = skip_commands;
         self
     }
@@ -603,8 +603,8 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options = Options::new(content.to_string())
-            .with_skip_commands(Some(Regex::new(r"Line \d").unwrap()));
+        let skip_commands = Regex::new(r"Line \d").expect("Invalid skip commands regex");
+        let options = Options::new(content.to_string()).with_skip_commands(Some(&skip_commands));
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(vec!["echo \"Hello there\""]);
         assert_eq!(expected, parsed);

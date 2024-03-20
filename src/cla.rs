@@ -1,7 +1,7 @@
-use std::{env, fs};
 use std::fmt::{Display, Formatter};
 use std::fs::read_to_string;
 use std::path::PathBuf;
+use std::{env, fs};
 
 use clap::Parser;
 use regex::Regex;
@@ -57,8 +57,8 @@ impl Args {
         self.execute_until.as_deref()
     }
 
-    pub(crate) fn skip_commands(&self) -> Option<Regex> {
-        self.skip_commands.clone()
+    pub(crate) fn skip_commands(&self) -> Option<&Regex> {
+        self.skip_commands.as_ref()
     }
 
     pub(crate) fn delay_between_commands(&self) -> Option<u32> {
