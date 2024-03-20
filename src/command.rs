@@ -46,13 +46,23 @@ impl<'a> Options<'a> {
     }
 
     pub(crate) fn build(self) -> Commands {
-        Commands::parse(&self).expect("Failed to parse the file")
+        Commands::parse(&self).expect("Failed to parse the MARKDOWN file")
     }
 }
 
 #[derive(Debug, PartialEq, Eq)]
 struct ParserError {
     message: String,
+}
+
+impl ParserError {
+    fn new(message: String) -> Self {
+        ParserError { message }
+    }
+
+    fn err<R>(message: String) -> Result<R, ParserError> {
+        Err(Self::new(message))
+    }
 }
 
 impl Display for ParserError {
@@ -76,7 +86,7 @@ pub(crate) struct Commands {
 }
 
 impl Commands {
-    fn parse(options: &Options<'_>) -> Result<Self, ParserError> {
+    fn parse<'a>(options: &'a Options<'a>) -> Result<Self, ParserError> {
         let mut commands = vec![];
         let mut buffer_command = vec![];
 
@@ -147,25 +157,25 @@ impl Commands {
 
         if let Some(from_line) = execute_from {
             if !execute_from_found {
-                return Err(ParserError {
-                    message: format!("No line matched the execute from: '{}'", from_line),
-                });
+                return ParserError::err(format!(
+                    "No line matched the execute from: '{}'",
+                    from_line
+                ));
             }
         }
 
         if let Some(until_line) = options.execute_until {
             if !execute_until_found {
                 return if let Some(from_line) = execute_from {
-                    Err(ParserError {
-                        message: format!(
-                            "No line matched the execute until: '{}' after the execute from: '{}'",
-                            until_line, from_line
-                        ),
-                    })
+                    ParserError::err(format!(
+                        "No line matched the execute until: '{}' after the execute from: '{}'",
+                        until_line, from_line
+                    ))
                 } else {
-                    Err(ParserError {
-                        message: format!("No line matched the execute until: '{}'", until_line),
-                    })
+                    ParserError::err(format!(
+                        "No line matched the execute until: '{}'",
+                        until_line
+                    ))
                 };
             }
         }
@@ -462,9 +472,8 @@ $ echo "Line 3"
         let from_line = "$ echo \"Line x\"";
         let options = Options::new(content).with_execute_from(Some(from_line));
         let parsed = Commands::parse(&options);
-        let expected = Err(ParserError {
-            message: format!("No line matched the execute from: '{}'", from_line),
-        });
+        let expected =
+            ParserError::err(format!("No line matched the execute from: '{}'", from_line));
         assert_eq!(expected, parsed);
     }
 
@@ -499,9 +508,10 @@ $ echo "Line 3"
         let until_line = "$ echo \"Line x\"";
         let options = Options::new(content).with_execute_until(Some(until_line));
         let parsed = Commands::parse(&options);
-        let expected = Err(ParserError {
-            message: format!("No line matched the execute until: '{}'", until_line),
-        });
+        let expected = ParserError::err(format!(
+            "No line matched the execute until: '{}'",
+            until_line
+        ));
         assert_eq!(expected, parsed);
     }
 
@@ -560,12 +570,10 @@ $ echo "Line 4"
             .with_execute_from(Some(from_line))
             .with_execute_until(Some(until_line));
         let parsed = Commands::parse(&options);
-        let expected = Err(ParserError {
-            message: format!(
-                "No line matched the execute until: '{}' after the execute from: '{}'",
-                until_line, from_line
-            ),
-        });
+        let expected = ParserError::err(format!(
+            "No line matched the execute until: '{}' after the execute from: '{}'",
+            until_line, from_line
+        ));
         assert_eq!(expected, parsed);
     }
 
