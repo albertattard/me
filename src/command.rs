@@ -78,6 +78,23 @@ pub(crate) struct Command {
     command: Vec<String>,
 }
 
+impl Display for Command {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let mut command = self.command.iter();
+
+        if let Some(first_line) = command.next() {
+            write!(f, "{}", first_line)?;
+
+            for line in command {
+                writeln!(f, " \\")?;
+                write!(f, " {}", line)?;
+            }
+        }
+
+        Ok(())
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Commands {
     /* TODO: Consider switching to a VecDeque given that we pop elements from the front when
@@ -207,23 +224,6 @@ set -e
         );
         buffer_command.push_str(&self.to_string());
         buffer_command
-    }
-}
-
-impl Display for Command {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut command = self.command.iter();
-
-        if let Some(first_line) = command.next() {
-            write!(f, "{}", first_line)?;
-
-            for line in command {
-                writeln!(f, " \\")?;
-                write!(f, " {}", line)?;
-            }
-        }
-
-        Ok(())
     }
 }
 
