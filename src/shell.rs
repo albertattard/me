@@ -11,7 +11,7 @@ pub(crate) struct ShellScript {
 }
 
 impl ShellScript {
-    pub(crate) fn new(directory: PathBuf, commands: String) -> Self {
+    pub(crate) fn new(directory: PathBuf, commands: &str) -> Self {
         let path = Self::create_file_path(directory);
 
         Self::create_shell_script(&path)
