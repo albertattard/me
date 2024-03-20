@@ -56,7 +56,7 @@ struct ParserError {
 }
 
 impl Display for ParserError {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.message)
     }
 }
@@ -64,12 +64,14 @@ impl Display for ParserError {
 impl std::error::Error for ParserError {}
 
 #[derive(Debug, PartialEq, Eq)]
-struct Command {
+pub(crate) struct Command {
     command: Vec<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Commands {
+    /* TODO: Consider switching to a VecDeque given that we pop elements from the front when
+    iterating. */
     commands: Vec<Command>,
 }
 
@@ -200,7 +202,7 @@ set -e
 }
 
 impl Display for Command {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut command = self.command.iter();
 
         if let Some(first_line) = command.next() {
@@ -217,7 +219,7 @@ impl Display for Command {
 }
 
 impl Display for Commands {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for command in &self.commands {
             writeln!(f, "{}", command)?;
         }
@@ -225,9 +227,38 @@ impl Display for Commands {
     }
 }
 
+impl Iterator for Commands {
+    type Item = Command;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.commands.is_empty() {
+            None
+        } else {
+            Some(self.commands.remove(0))
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn empty_iterator() {
+        let commands = empty();
+        let expected = vec![].into_iter();
+        assert!(commands.eq(expected));
+    }
+
+    #[test]
+    fn non_empty_iterator() {
+        let commands = of_strs(vec!["echo \"Hello world\""]);
+        let expected = vec![Command {
+            command: vec!["echo \"Hello world\"".to_string()],
+        }]
+        .into_iter();
+        assert!(commands.eq(expected));
+    }
 
     #[test]
     fn parse_empty_content() {

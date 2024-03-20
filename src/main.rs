@@ -1,3 +1,5 @@
+#![warn(missing_debug_implementations, rust_2018_idioms)]
+
 use crate::cla::Args;
 use crate::command::Options;
 use crate::shell::ShellScript;
@@ -33,7 +35,7 @@ mod tests {
 
     #[test]
     fn run_with_no_args() {
-        let dir = "./target/fixtures/1";
+        let dir = "./target/fixtures/run_with_no_args";
         remove_fixtures(dir);
         new_fixture(
             &format!("{}/README.md", dir),
@@ -57,7 +59,7 @@ $ echo 'Hello world!!'
 
     #[test]
     fn run_with_some_args() {
-        let dir = "./target/fixtures/2";
+        let dir = "./target/fixtures/run_with_some_args";
         remove_fixtures(dir);
         new_fixture(
             &format!("{}/README.md", dir),
@@ -96,7 +98,7 @@ $ echo 'Hello 4!!'
 
     #[test]
     fn run_with_recursive_args() {
-        let dir = "./target/fixtures/3";
+        let dir = "./target/fixtures/run_with_recursive_args";
         remove_fixtures(dir);
         new_fixture(
             &format!("{}/README.md", dir),

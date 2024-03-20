@@ -1,10 +1,10 @@
-use std::{env, fs};
 use std::fs::File;
 use std::io::Write;
 use std::os::unix::prelude::PermissionsExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::{env, fs};
 
 pub(crate) struct ShellScript {
     path: PathBuf,
