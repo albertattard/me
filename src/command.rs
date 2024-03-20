@@ -97,8 +97,7 @@ impl Display for Command {
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Commands {
-    /* TODO: Consider switching to a VecDeque given that we pop elements from the front when
-    iterating. */
+    /* TODO: Consider switching to a VecDeque given that we pop elements from the front when iterating. */
     commands: Vec<Command>,
 }
 
@@ -134,20 +133,18 @@ impl Commands {
             }
 
             if within_command_block {
-                let mut command_line = line.trim_start().to_string();
+                let mut command_line = line.trim_start();
                 if command_line.starts_with("$ ") {
-                    command_line = command_line[2..].trim_start().to_string();
+                    command_line = command_line[2..].trim_start();
                 }
 
                 if command_line.ends_with('\\') {
-                    command_line = command_line[..command_line.len() - 1]
-                        .trim_end()
-                        .to_string();
+                    command_line = command_line[..command_line.len() - 1].trim_end();
                     buffer_command.push(command_line);
                     continue;
                 }
 
-                buffer_command.push(command_line.to_string());
+                buffer_command.push(command_line);
 
                 /* Check if the command needs to be skipped and clear the buffer if so */
                 if let Some(regex) = &options.skip_commands {
@@ -158,7 +155,8 @@ impl Commands {
                 }
 
                 commands.push(Command {
-                    command: buffer_command.clone(),
+                    /* TODO: This is inefficient and need to remove the conversion to string */
+                    command: buffer_command.iter().map(|s| s.to_string()).collect(),
                 });
                 buffer_command.clear();
             }
