@@ -245,15 +245,20 @@ EXECUTE_ALL=false
 
 # Confirms before executing each command.  The command can be skipped and the script exited.
 interactive() {
+  COLOR_OFF='\033[0m'
+  CURSOR_CARET='\033[0;94m'
+  COMMAND='\033[0;92m'
+  MENU='\033[0;02m'
+
   if [ "${EXECUTE_ALL}" != true ]; then
-    echo '--------------------------------------------------'
-    echo "> ${*}"
-    echo '--------------------------------------------------'
+    echo "${MENU}--------------------------------------------------${COLOR_OFF}"
+    echo "${CURSOR_CARET}>${COLOR_OFF} ${COMMAND}${*}${COLOR_OFF}"
+    echo "${MENU}--------------------------------------------------"
     read -r -p "Press enter to execute,
  A to execute all the remaining commands,
  S to skip and
  X to exit " input
-    echo '--------------------------------------------------'
+    echo "--------------------------------------------------${COLOR_OFF}"
 
     case ${input} in
       [sS] ) return;;
@@ -804,15 +809,20 @@ EXECUTE_ALL=false
 
 # Confirms before executing each command.  The command can be skipped and the script exited.
 interactive() {
+  COLOR_OFF='\033[0m'
+  CURSOR_CARET='\033[0;94m'
+  COMMAND='\033[0;92m'
+  MENU='\033[0;02m'
+
   if [ "${EXECUTE_ALL}" != true ]; then
-    echo '--------------------------------------------------'
-    echo "> ${*}"
-    echo '--------------------------------------------------'
+    echo "${MENU}--------------------------------------------------${COLOR_OFF}"
+    echo "${CURSOR_CARET}>${COLOR_OFF} ${COMMAND}${*}${COLOR_OFF}"
+    echo "${MENU}--------------------------------------------------"
     read -r -p "Press enter to execute,
  A to execute all the remaining commands,
  S to skip and
  X to exit " input
-    echo '--------------------------------------------------'
+    echo "--------------------------------------------------${COLOR_OFF}"
 
     case ${input} in
       [sS] ) return;;
