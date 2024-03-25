@@ -3,6 +3,7 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::{env, fs};
 
+use crate::command::ExecutionMode;
 use clap::Parser;
 use regex::Regex;
 use walkdir::WalkDir;
@@ -12,35 +13,46 @@ use walkdir::WalkDir;
 #[command(author, version, about, long_about = None)]
 pub(crate) struct Args {
     /// Name of the MARKDOWN file to parse
-    #[arg(short, long, default_value = "README.md", display_order = 1)]
+    #[arg(short, long, default_value = "README.md")]
     file_name: String,
 
     /// Executes from the given command, or line within the file.  When provided, anything before
     /// this line is ignored.  The matching command is not ignored.  If no matching lines are found,
     /// then the program will panic.  If more than one line matches, the program will start from
     /// the first matching line.
-    #[arg(short, long, display_order = 2)]
+    #[arg(short = 'b', long)]
     execute_from: Option<String>,
 
     /// Executes until the given command, or line within the file.  When provided, anything after
     /// this line is ignored.  The matching command is not ignored.  If no matching lines are found,
     /// then the program will panic.  If more than one line matches, the program will stop at the
     /// first matching line.
-    #[arg(short, long, display_order = 3)]
+    #[arg(short = 'e', long)]
     execute_until: Option<String>,
 
     /// Skips all commands that match the provided regular expression.  Nothing happens if the given
     /// regular expression does not match any commands.
-    #[arg(short, long, display_order = 4)]
+    #[arg(short, long)]
     skip_commands: Option<Regex>,
 
     /// Introduce a delay (in milliseconds) between each command
-    #[arg(short, long, display_order = 5)]
+    #[arg(short, long, conflicts_with = "interactive")]
     delay_between_commands: Option<u32>,
+
+    /// Prompts for a confirmation before executing each command, ideal when debugging a problem
+    /// with a MARKDOWN file.
+    #[arg(
+        short,
+        long,
+        conflicts_with = "delay_between_commands",
+        num_args = 0,
+        required = false
+    )]
+    interactive: bool,
 
     /// Searches for MARKDOWN files, named README.md or the provided file name, in the
     /// subdirectories and execute each MARKDOWN file from the directory it was found.
-    #[arg(short, long, num_args = 0..=1, default_missing_value = "2", display_order = 6)]
+    #[arg(short, long, num_args = 0..=1, value_name = "DEPTH", default_missing_value = "2", display_order = 7)]
     recursive: Option<usize>,
 }
 
@@ -61,8 +73,14 @@ impl Args {
         self.skip_commands.as_ref()
     }
 
-    pub(crate) fn delay_between_commands(&self) -> Option<u32> {
-        self.delay_between_commands
+    pub(crate) fn execution_mode(&self) -> ExecutionMode {
+        if self.interactive {
+            ExecutionMode::Interactive
+        } else if let Some(delay_in_millis) = self.delay_between_commands {
+            ExecutionMode::DelayBetweenCommands(delay_in_millis)
+        } else {
+            ExecutionMode::Default
+        }
     }
 
     pub(crate) fn files(&self) -> Vec<MarkdownFile> {

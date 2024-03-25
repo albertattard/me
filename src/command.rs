@@ -1,6 +1,14 @@
 use std::fmt::{Debug, Display, Formatter};
 
+use crate::command::ExecutionMode::{Default, DelayBetweenCommands, Interactive};
 use regex::Regex;
+
+#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
+pub(crate) enum ExecutionMode {
+    Default,
+    DelayBetweenCommands(u32),
+    Interactive,
+}
 
 #[derive(Debug)]
 pub(crate) struct Options<'a> {
@@ -8,7 +16,7 @@ pub(crate) struct Options<'a> {
     execute_from: Option<&'a str>,
     execute_until: Option<&'a str>,
     skip_commands: Option<&'a Regex>,
-    delay_between_commands: Option<u32>,
+    execution_mode: ExecutionMode,
 }
 
 impl<'a> Options<'a> {
@@ -18,7 +26,7 @@ impl<'a> Options<'a> {
             execute_from: None,
             execute_until: None,
             skip_commands: None,
-            delay_between_commands: None,
+            execution_mode: Default,
         }
     }
 
@@ -37,11 +45,8 @@ impl<'a> Options<'a> {
         self
     }
 
-    pub(crate) fn with_delay_between_commands(
-        mut self,
-        delay_between_commands: Option<u32>,
-    ) -> Self {
-        self.delay_between_commands = delay_between_commands;
+    pub(crate) fn with_execution_mode(mut self, execution_mode: ExecutionMode) -> Self {
+        self.execution_mode = execution_mode;
         self
     }
 
@@ -99,7 +104,7 @@ impl<'a> Display for Command<'a> {
 pub(crate) struct Commands<'a> {
     /* TODO: Consider switching to a VecDeque given that we pop elements from the front when iterating. */
     commands: Vec<Command<'a>>,
-    delay_between_commands: Option<u32>,
+    execution_mode: ExecutionMode,
 }
 
 impl<'a> Commands<'a> {
@@ -197,7 +202,7 @@ impl<'a> Commands<'a> {
 
         Ok(Commands {
             commands,
-            delay_between_commands: options.delay_between_commands,
+            execution_mode: options.execution_mode,
         })
     }
 
@@ -213,27 +218,31 @@ set -e
 
 "#,
         );
-        buffer_command.push_str(&self.to_string());
+
+        match self.execution_mode {
+            Default => buffer_command.push_str(&self.to_string()),
+            DelayBetweenCommands(delay_in_millis) => {
+                for (index, command) in self.commands.iter().enumerate() {
+                    if index > 0 {
+                        buffer_command.push_str(format!("sleep {}\n", delay_in_millis).as_str());
+                    }
+                    buffer_command.push_str(format!("{}\n", command).as_str());
+                }
+            }
+            Interactive => {
+                todo!("Coming soon!");
+            }
+        }
+
         buffer_command
     }
 }
 
 impl Display for Commands<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        /* TODO: Should this be handled here or at the as_shell_script() function? */
-        if let Some(delay_in_millis) = self.delay_between_commands {
-            for (index, command) in self.commands.iter().enumerate() {
-                if index > 0 {
-                    writeln!(f, "sleep {}", delay_in_millis)?;
-                }
-                writeln!(f, "{}", command)?;
-            }
-        } else {
-            for command in &self.commands {
-                writeln!(f, "{}", command)?;
-            }
+        for command in &self.commands {
+            writeln!(f, "{}", command)?;
         }
-
         Ok(())
     }
 }
@@ -279,7 +288,7 @@ After command
 
         let options = Options::new(content);
         let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["ls -la"], None);
+        let expected = ok_of_strs(vec!["ls -la"], Default);
         assert_eq!(expected, parsed);
     }
 
@@ -302,7 +311,10 @@ $ echo "Goodbye"
 
         let options = Options::new(content);
         let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""], None);
+        let expected = ok_of_strs(
+            vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
+            Default,
+        );
         assert_eq!(expected, parsed);
     }
 
@@ -329,7 +341,10 @@ $ echo "Hello"
 
         let options = Options::new(content);
         let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""], None);
+        let expected = ok_of_strs(
+            vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
+            Default,
+        );
         assert_eq!(expected, parsed);
     }
 
@@ -349,7 +364,7 @@ $ java \
             commands: vec![Command {
                 command: vec!["java", "-jar target/app.jar"],
             }],
-            delay_between_commands: None,
+            execution_mode: Default,
         });
         assert_eq!(expected, parsed);
     }
@@ -369,7 +384,7 @@ $ echo "Line 3"
         let parsed = Commands::parse(&options);
         let expected = ok_of_strs(
             vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-            None,
+            Default,
         );
         assert_eq!(expected, parsed);
     }
@@ -405,7 +420,7 @@ $ echo "After"
                     command: vec!["echo \"After\""],
                 },
             ],
-            delay_between_commands: None,
+            execution_mode: Default,
         });
         assert_eq!(expected, parsed);
     }
@@ -423,7 +438,7 @@ $ echo "Line 3"
 
         let options = Options::new(content).with_execute_from(Some("$ echo \"Line 2\""));
         let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], None);
+        let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], Default);
         assert_eq!(expected, parsed);
     }
 
@@ -459,7 +474,7 @@ $ echo "Line 3"
 
         let options = Options::new(content).with_execute_until(Some("$ echo \"Line 2\""));
         let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], None);
+        let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], Default);
         assert_eq!(expected, parsed);
     }
 
@@ -500,7 +515,7 @@ $ echo "Line 4"
             .with_execute_from(Some("$ echo \"Line 2\""))
             .with_execute_until(Some("$ echo \"Line 3\""));
         let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], None);
+        let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], Default);
         assert_eq!(expected, parsed);
     }
 
@@ -517,7 +532,7 @@ $ echo "Line 1"
             .with_execute_from(Some("$ echo \"Line 1\""))
             .with_execute_until(Some("$ echo \"Line 1\""));
         let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 1\""], None);
+        let expected = ok_of_strs(vec!["echo \"Line 1\""], Default);
         assert_eq!(expected, parsed);
     }
 
@@ -562,7 +577,7 @@ $ echo "Line 3"
             .with_execute_from(Some("$ echo \"Line 1\""))
             .with_execute_until(Some("$ echo \"Line 2\""));
         let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], None);
+        let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], Default);
         assert_eq!(expected, parsed);
     }
 
@@ -581,7 +596,7 @@ $ echo "Line 3"
         let skip_commands = Regex::new(r"Line \d").expect("Invalid skip commands regex");
         let options = Options::new(content).with_skip_commands(Some(&skip_commands));
         let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Hello there\""], None);
+        let expected = ok_of_strs(vec!["echo \"Hello there\""], Default);
         assert_eq!(expected, parsed);
     }
 
@@ -595,7 +610,7 @@ $ echo "Line 3"
 
     #[test]
     fn format_one_single_line_command() {
-        let commands = of_strs(vec!["ls -la"], None);
+        let commands = of_strs(vec!["ls -la"], Default);
         let formatted = format!("{}", commands);
         let expected = r#"ls -la
 "#;
@@ -604,7 +619,10 @@ $ echo "Line 3"
 
     #[test]
     fn format_multiple_single_line_command() {
-        let commands = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""], None);
+        let commands = of_strs(
+            vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
+            Default,
+        );
         let formatted = format!("{}", commands);
         let expected = r#"echo "Hello"
 ls -la
@@ -619,7 +637,7 @@ echo "Goodbye"
             commands: vec![Command {
                 command: vec!["java", "-jar target/app.jar"],
             }],
-            delay_between_commands: None,
+            execution_mode: Default,
         };
         let formatted = format!("{}", commands);
         let expected = r#"java \
@@ -632,7 +650,7 @@ echo "Goodbye"
     fn format_multiple_single_line_commands() {
         let commands = of_strs(
             vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-            None,
+            Default,
         );
         let formatted = format!("{}", commands);
         let expected = r#"echo "Line 1"
@@ -659,7 +677,7 @@ echo "Line 3"
                     command: vec!["echo \"After\""],
                 },
             ],
-            delay_between_commands: None,
+            execution_mode: Default,
         };
         let formatted = format!("{}", commands);
         let expected = r#"echo "Before"
@@ -673,30 +691,7 @@ echo "After"
     }
 
     #[test]
-    fn format_content_delay_between_commands() {
-        let content = r#"# README
-
-```shell
-$ echo "Line 1"
-$ echo "Line 2"
-$ echo "Line 3"
-```
-"#;
-
-        let options = Options::new(content).with_delay_between_commands(Some(100));
-        let parsed = format!("{}", Commands::parse(&options).unwrap());
-        let expected = r#"echo "Line 1"
-sleep 100
-echo "Line 2"
-sleep 100
-echo "Line 3"
-"#;
-
-        assert_eq!(expected, parsed);
-    }
-
-    #[test]
-    fn format_as_shell_script() {
+    fn format_as_shell_script_with_default_execution() {
         let commands = of_strs(
             vec![
                 "echo \"Before\"",
@@ -704,7 +699,7 @@ echo "Line 3"
                 "java -jar target/app-2.jar",
                 "echo \"After\"",
             ],
-            None,
+            Default,
         );
         let formatted = commands.as_shell_script();
         let expected = r#"#!/bin/sh
@@ -722,25 +717,50 @@ echo "After"
         assert_eq!(expected, formatted);
     }
 
+    #[test]
+    fn format_content_delay_between_commands() {
+        let commands = of_strs(
+            vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
+            DelayBetweenCommands(100),
+        );
+
+        let formatted = commands.as_shell_script();
+        let expected = r#"#!/bin/sh
+
+# Generated by the MARKDOWN executor
+# This file is automatically deleted once the execution completes
+
+set -e
+
+echo "Line 1"
+sleep 100
+echo "Line 2"
+sleep 100
+echo "Line 3"
+"#;
+
+        assert_eq!(expected, formatted);
+    }
+
     fn ok_empty() -> Result<Commands<'static>, ParserError> {
         Ok(empty())
     }
 
     fn ok_of_strs(
         commands: Vec<&str>,
-        delay_between_commands: Option<u32>,
+        execution_mode: ExecutionMode,
     ) -> Result<Commands<'_>, ParserError> {
-        Ok(of_strs(commands, delay_between_commands))
+        Ok(of_strs(commands, execution_mode))
     }
 
     fn empty() -> Commands<'static> {
         Commands {
             commands: vec![],
-            delay_between_commands: None,
+            execution_mode: Default,
         }
     }
 
-    fn of_strs(commands: Vec<&str>, delay_between_commands: Option<u32>) -> Commands<'_> {
+    fn of_strs(commands: Vec<&str>, execution_mode: ExecutionMode) -> Commands<'_> {
         let commands = commands
             .iter()
             .map(|command| Command {
@@ -749,7 +769,7 @@ echo "After"
             .collect();
         Commands {
             commands,
-            delay_between_commands,
+            execution_mode,
         }
     }
 }

@@ -16,7 +16,7 @@ fn main() {
             .with_execute_from(args.execute_from())
             .with_execute_until(args.execute_until())
             .with_skip_commands(args.skip_commands())
-            .with_delay_between_commands(args.delay_between_commands())
+            .with_execution_mode(args.execution_mode())
             .build()
             .as_shell_script();
 
