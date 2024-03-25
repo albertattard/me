@@ -45,8 +45,8 @@ impl<'a> Options<'a> {
         self
     }
 
-    pub(crate) fn build(self) -> Commands {
-        Commands::parse(&self).expect("Failed to parse the MARKDOWN file")
+    pub(crate) fn build(&'a self) -> Commands<'a> {
+        Commands::parse(self).expect("Failed to parse the MARKDOWN file")
     }
 }
 
@@ -74,11 +74,11 @@ impl Display for ParserError {
 impl std::error::Error for ParserError {}
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Command {
-    command: Vec<String>,
+pub(crate) struct Command<'a> {
+    command: Vec<&'a str>,
 }
 
-impl Display for Command {
+impl<'a> Display for Command<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut command = self.command.iter();
 
@@ -96,14 +96,14 @@ impl Display for Command {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Commands {
+pub(crate) struct Commands<'a> {
     /* TODO: Consider switching to a VecDeque given that we pop elements from the front when iterating. */
-    commands: Vec<Command>,
+    commands: Vec<Command<'a>>,
     delay_between_commands: Option<u32>,
 }
 
-impl Commands {
-    fn parse<'a>(options: &'a Options<'a>) -> Result<Self, ParserError> {
+impl<'a> Commands<'a> {
+    fn parse(options: &'a Options<'a>) -> Result<Self, ParserError> {
         let mut commands = vec![];
         let mut buffer_command = vec![];
 
@@ -156,10 +156,9 @@ impl Commands {
                 }
 
                 commands.push(Command {
-                    /* TODO: This is inefficient and need to remove the conversion to string */
-                    command: buffer_command.iter().map(|s| s.to_string()).collect(),
+                    command: buffer_command,
                 });
-                buffer_command.clear();
+                buffer_command = vec![];
             }
 
             if options
@@ -219,8 +218,9 @@ set -e
     }
 }
 
-impl Display for Commands {
+impl Display for Commands<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        /* TODO: Should this be handled here or at the as_shell_script() function? */
         if let Some(delay_in_millis) = self.delay_between_commands {
             for (index, command) in self.commands.iter().enumerate() {
                 if index > 0 {
@@ -347,7 +347,7 @@ $ java \
         let parsed = Commands::parse(&options);
         let expected = Ok(Commands {
             commands: vec![Command {
-                command: vec!["java".to_string(), "-jar target/app.jar".to_string()],
+                command: vec!["java", "-jar target/app.jar"],
             }],
             delay_between_commands: None,
         });
@@ -393,16 +393,16 @@ $ echo "After"
         let expected = Ok(Commands {
             commands: vec![
                 Command {
-                    command: vec!["echo \"Before\"".to_string()],
+                    command: vec!["echo \"Before\""],
                 },
                 Command {
-                    command: vec!["java".to_string(), "-jar target/app-1.jar".to_string()],
+                    command: vec!["java", "-jar target/app-1.jar"],
                 },
                 Command {
-                    command: vec!["java".to_string(), "-jar target/app-2.jar".to_string()],
+                    command: vec!["java", "-jar target/app-2.jar"],
                 },
                 Command {
-                    command: vec!["echo \"After\"".to_string()],
+                    command: vec!["echo \"After\""],
                 },
             ],
             delay_between_commands: None,
@@ -617,7 +617,7 @@ echo "Goodbye"
     fn format_one_multi_line_command() {
         let commands = Commands {
             commands: vec![Command {
-                command: vec!["java".to_string(), "-jar target/app.jar".to_string()],
+                command: vec!["java", "-jar target/app.jar"],
             }],
             delay_between_commands: None,
         };
@@ -647,16 +647,16 @@ echo "Line 3"
         let commands = Commands {
             commands: vec![
                 Command {
-                    command: vec!["echo \"Before\"".to_string()],
+                    command: vec!["echo \"Before\""],
                 },
                 Command {
-                    command: vec!["java".to_string(), "-jar target/app-1.jar".to_string()],
+                    command: vec!["java", "-jar target/app-1.jar"],
                 },
                 Command {
-                    command: vec!["java".to_string(), "-jar target/app-2.jar".to_string()],
+                    command: vec!["java", "-jar target/app-2.jar"],
                 },
                 Command {
-                    command: vec!["echo \"After\"".to_string()],
+                    command: vec!["echo \"After\""],
                 },
             ],
             delay_between_commands: None,
@@ -722,29 +722,29 @@ echo "After"
         assert_eq!(expected, formatted);
     }
 
-    fn ok_empty() -> Result<Commands, ParserError> {
+    fn ok_empty() -> Result<Commands<'static>, ParserError> {
         Ok(empty())
     }
 
     fn ok_of_strs(
         commands: Vec<&str>,
         delay_between_commands: Option<u32>,
-    ) -> Result<Commands, ParserError> {
+    ) -> Result<Commands<'_>, ParserError> {
         Ok(of_strs(commands, delay_between_commands))
     }
 
-    fn empty() -> Commands {
+    fn empty() -> Commands<'static> {
         Commands {
             commands: vec![],
             delay_between_commands: None,
         }
     }
 
-    fn of_strs(commands: Vec<&str>, delay_between_commands: Option<u32>) -> Commands {
+    fn of_strs(commands: Vec<&str>, delay_between_commands: Option<u32>) -> Commands<'_> {
         let commands = commands
             .iter()
             .map(|command| Command {
-                command: vec![command.to_string()],
+                command: vec![command],
             })
             .collect();
         Commands {
