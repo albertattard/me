@@ -243,24 +243,25 @@ set -e
                 buffer_command.push_str(r#"# When set to true, it will execute the remaining commands without interaction
 EXECUTE_ALL=false
 
-# Confirms before executing each command.  The command can be skipped and the script exited.
-interactive() {
-  COLOR_OFF='\033[0m'
-  CURSOR_CARET='\033[0;94m'
-  COMMAND='\033[0;92m'
-  MENU='\033[0;02m'
+"#);
+                for (index, command) in self.commands.iter().enumerate() {
+                    let command_to_echo = str::replace(command.to_string().as_str(), "'", "''");
+                    let command_to_execute = command.to_string();
+                    let interactive = format!(
+                        r#"# Confirms before executing each command.  The command can be skipped and the script exited.
+interactive_{index}() {{
 
-  if [ "${EXECUTE_ALL}" != true ]; then
-    echo "${MENU}--------------------------------------------------${COLOR_OFF}"
-    echo "${CURSOR_CARET}>${COLOR_OFF} ${COMMAND}${*}${COLOR_OFF}"
-    echo "${MENU}--------------------------------------------------"
-    read -r -p "Press enter to execute,
+  if [ "${{EXECUTE_ALL}}" != true ]; then
+    echo '\033[0;02m--------------------------------------------------\033[0m'
+    echo '\033[0;94m>\033[0m \033[0;92m{command_to_echo}\033[0m'
+    echo '\033[0;02m--------------------------------------------------'
+    read -r -p 'Press enter to execute,
  A to execute all the remaining commands,
  S to skip and
- X to exit " input
-    echo "--------------------------------------------------${COLOR_OFF}"
+ X to exit ' input
+    echo '--------------------------------------------------\033[0m'
 
-    case ${input} in
+    case ${{input}} in
       [sS] ) return;;
       [xX] ) exit 0;;
       [aA] ) EXECUTE_ALL=true;
@@ -271,12 +272,15 @@ interactive() {
   fi
 
   # Execute the command
-  "$@";
-}
+  {command_to_execute}
+}}
 
-"#);
-                for command in &self.commands {
-                    buffer_command.push_str(format!("interactive {}\n", command).as_str());
+interactive_{index}
+
+
+"#
+                    );
+                    buffer_command.push_str(interactive.as_str());
                 }
             }
         }
@@ -808,21 +812,17 @@ set -e
 EXECUTE_ALL=false
 
 # Confirms before executing each command.  The command can be skipped and the script exited.
-interactive() {
-  COLOR_OFF='\033[0m'
-  CURSOR_CARET='\033[0;94m'
-  COMMAND='\033[0;92m'
-  MENU='\033[0;02m'
+interactive_0() {
 
   if [ "${EXECUTE_ALL}" != true ]; then
-    echo "${MENU}--------------------------------------------------${COLOR_OFF}"
-    echo "${CURSOR_CARET}>${COLOR_OFF} ${COMMAND}${*}${COLOR_OFF}"
-    echo "${MENU}--------------------------------------------------"
-    read -r -p "Press enter to execute,
+    echo '\033[0;02m--------------------------------------------------\033[0m'
+    echo '\033[0;94m>\033[0m \033[0;92mecho "Line 1"\033[0m'
+    echo '\033[0;02m--------------------------------------------------'
+    read -r -p 'Press enter to execute,
  A to execute all the remaining commands,
  S to skip and
- X to exit " input
-    echo "--------------------------------------------------${COLOR_OFF}"
+ X to exit ' input
+    echo '--------------------------------------------------\033[0m'
 
     case ${input} in
       [sS] ) return;;
@@ -835,12 +835,72 @@ interactive() {
   fi
 
   # Execute the command
-  "$@";
+  echo "Line 1"
 }
 
-interactive echo "Line 1"
-interactive echo "Line 2"
-interactive echo "Line 3"
+interactive_0
+
+
+# Confirms before executing each command.  The command can be skipped and the script exited.
+interactive_1() {
+
+  if [ "${EXECUTE_ALL}" != true ]; then
+    echo '\033[0;02m--------------------------------------------------\033[0m'
+    echo '\033[0;94m>\033[0m \033[0;92mecho "Line 2"\033[0m'
+    echo '\033[0;02m--------------------------------------------------'
+    read -r -p 'Press enter to execute,
+ A to execute all the remaining commands,
+ S to skip and
+ X to exit ' input
+    echo '--------------------------------------------------\033[0m'
+
+    case ${input} in
+      [sS] ) return;;
+      [xX] ) exit 0;;
+      [aA] ) EXECUTE_ALL=true;
+        ;;
+      * )
+        ;;
+    esac
+  fi
+
+  # Execute the command
+  echo "Line 2"
+}
+
+interactive_1
+
+
+# Confirms before executing each command.  The command can be skipped and the script exited.
+interactive_2() {
+
+  if [ "${EXECUTE_ALL}" != true ]; then
+    echo '\033[0;02m--------------------------------------------------\033[0m'
+    echo '\033[0;94m>\033[0m \033[0;92mecho "Line 3"\033[0m'
+    echo '\033[0;02m--------------------------------------------------'
+    read -r -p 'Press enter to execute,
+ A to execute all the remaining commands,
+ S to skip and
+ X to exit ' input
+    echo '--------------------------------------------------\033[0m'
+
+    case ${input} in
+      [sS] ) return;;
+      [xX] ) exit 0;;
+      [aA] ) EXECUTE_ALL=true;
+        ;;
+      * )
+        ;;
+    esac
+  fi
+
+  # Execute the command
+  echo "Line 3"
+}
+
+interactive_2
+
+
 "#;
 
         assert_eq!(expected, formatted);
