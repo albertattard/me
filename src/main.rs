@@ -58,7 +58,7 @@ $ echo 'Hello world!!'
             .assert()
             .stdout(format!(
                 r#"{COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo Hello world!! {NO_COLOUR}
+{COMMAND_COLOUR}$ echo 'Hello world!!'{NO_COLOUR}
 Hello world!!
 "#
             ))
@@ -102,10 +102,10 @@ $ echo 'Hello 4!!'
             .assert()
             .stdout(format!(
                 r#"{COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo Hello 2!! {NO_COLOUR}
+{COMMAND_COLOUR}$ echo 'Hello 2!!'{NO_COLOUR}
 Hello 2!!
 {COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo Hello 3!! {NO_COLOUR}
+{COMMAND_COLOUR}$ echo 'Hello 3!!'{NO_COLOUR}
 Hello 3!!
 "#
             ))
@@ -150,10 +150,10 @@ $ echo 'Level 3'
             .assert()
             .stdout(format!(
                 r#"{COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo Level 1 {NO_COLOUR}
+{COMMAND_COLOUR}$ echo 'Level 1'{NO_COLOUR}
 Level 1
 {COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo Level 2 {NO_COLOUR}
+{COMMAND_COLOUR}$ echo 'Level 2'{NO_COLOUR}
 Level 2
 "#
             ))

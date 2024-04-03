@@ -251,15 +251,19 @@ set -e
                 for command in &self.commands {
                     buffer_command.push_str("echo '\\033[0;02m---\\033[0m'\n");
 
-                    let mut lines = command.lines.iter().map(|l| str::replace(l, "'", "''"));
+                    let mut lines = command
+                        .lines
+                        .iter()
+                        .map(|line| str::replace(line, "\\", "\\\\"))
+                        .map(|line| str::replace(line.as_str(), "'", "'\\''"));
                     if let Some(first_line) = lines.next() {
                         buffer_command.push_str(
-                            format!("echo '\\033[0;02m$ {first_line} \\033[0m'\n").as_str(),
+                            format!("echo '\\033[0;02m$ {first_line}\\033[0m'\n").as_str(),
                         );
 
                         for line in lines {
                             buffer_command
-                                .push_str(format!("echo '\\033[0;02m{line} \\033[0m'\n").as_str());
+                                .push_str(format!("echo '\\033[0;02m{line}\\033[0m'\n").as_str());
                         }
                     }
 
@@ -887,19 +891,19 @@ echo "After"
 set -e
 
 echo '\033[0;02m---\033[0m'
-echo '\033[0;02m$ echo ''Before'' \033[0m'
+echo '\033[0;02m$ echo '\''Before'\''\033[0m'
 echo 'Before'
 
 echo '\033[0;02m---\033[0m'
-echo '\033[0;02m$ java -jar target/app-1.jar \033[0m'
+echo '\033[0;02m$ java -jar target/app-1.jar\033[0m'
 java -jar target/app-1.jar
 
 echo '\033[0;02m---\033[0m'
-echo '\033[0;02m$ java -jar target/app-2.jar \033[0m'
+echo '\033[0;02m$ java -jar target/app-2.jar\033[0m'
 java -jar target/app-2.jar
 
 echo '\033[0;02m---\033[0m'
-echo '\033[0;02m$ echo ''After'' \033[0m'
+echo '\033[0;02m$ echo '\''After'\''\033[0m'
 echo 'After'
 
 "#;
