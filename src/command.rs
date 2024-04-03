@@ -126,7 +126,7 @@ impl<'a> Commands<'a> {
             }
 
             if let Some(offset) = within_command_block {
-                if line[offset..].eq("```") {
+                if line.len() > offset && line[offset..].eq("```") {
                     within_command_block = None;
                     continue;
                 }
@@ -141,14 +141,18 @@ impl<'a> Commands<'a> {
             }
 
             if let Some(offset) = within_command_block {
-                let mut command_line = &line[offset..];
+                let mut command_line = if line.len() > offset {
+                    &line[offset..]
+                } else {
+                    ""
+                };
                 if command_line.starts_with("$ ") {
                     command_line = &command_line[2..];
                 }
 
                 if let Some(delimiter) = within_here_document_block.as_ref() {
                     buffer_command.push(command_line);
-                    if line == delimiter {
+                    if command_line == delimiter {
                         commands.push(Command {
                             command: buffer_command,
                         });
@@ -193,12 +197,11 @@ impl<'a> Commands<'a> {
                 buffer_command = vec![];
             }
 
-            if options
-                .execute_until
-                .map_or(false, |m| line.trim().eq_ignore_ascii_case(m))
-            {
-                execute_until_found = true;
-                break;
+            if let Some(until_line) = options.execute_until {
+                if line.trim().eq_ignore_ascii_case(until_line) {
+                    execute_until_found = true;
+                    break;
+                }
             }
         }
 
@@ -487,6 +490,44 @@ EOF
         }
 
         #[test]
+        fn parse_content_with_one_multi_line_command_here_document_with_indentation() {
+            let content = r#"# README
+
+- Step 1
+
+  ```shell
+  $ patch -p1 -u './Test.java' << EOF
+  --- ./Test.java
+  +++ ./Test.java
+  @@ -1,3 +1,2 @@
+   package demo;
+
+   -import java.io.Console;
+  EOF
+  ```
+"#;
+
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = Ok(Commands {
+                commands: vec![Command {
+                    command: vec![
+                        "patch -p1 -u './Test.java' << EOF",
+                        "--- ./Test.java",
+                        "+++ ./Test.java",
+                        "@@ -1,3 +1,2 @@",
+                        " package demo;",
+                        "",
+                        " -import java.io.Console;",
+                        "EOF",
+                    ],
+                }],
+                execution_mode: Default,
+            });
+            assert_eq!(expected, parsed);
+        }
+
+        #[test]
         fn parse_content_with_multiple_single_line_commands() {
             let content = r#"# README
 
@@ -718,7 +759,7 @@ $ echo "Line 3"
         }
     }
 
-    mod formater {
+    mod formatter {
         use super::*;
 
         #[test]
