@@ -33,6 +33,9 @@ mod tests {
 
     use assert_cmd::Command;
 
+    const COMMAND_COLOUR: &str = "\u{1b}[0;02m";
+    const NO_COLOUR: &str = "\u{1b}[0m";
+
     #[test]
     fn run_with_no_args() {
         let dir = "./target/fixtures/run_with_no_args";
@@ -53,7 +56,12 @@ $ echo 'Hello world!!'
             .expect("Failed to create test command")
             .current_dir(dir)
             .assert()
-            .stdout("\u{1b}[0;92m$ echo Hello world!!\u{1b}[0m\nHello world!!\n")
+            .stdout(format!(
+                r#"{COMMAND_COLOUR}---{NO_COLOUR}
+{COMMAND_COLOUR}$ echo Hello world!! {NO_COLOUR}
+Hello world!!
+"#
+            ))
             .success();
     }
 
@@ -92,7 +100,15 @@ $ echo 'Hello 4!!'
                 "Line \\d+",
             ])
             .assert()
-            .stdout("\u{1b}[0;92m$ echo Hello 2!!\u{1b}[0m\nHello 2!!\n\u{1b}[0;92m$ echo Hello 3!!\u{1b}[0m\nHello 3!!\n")
+            .stdout(format!(
+                r#"{COMMAND_COLOUR}---{NO_COLOUR}
+{COMMAND_COLOUR}$ echo Hello 2!! {NO_COLOUR}
+Hello 2!!
+{COMMAND_COLOUR}---{NO_COLOUR}
+{COMMAND_COLOUR}$ echo Hello 3!! {NO_COLOUR}
+Hello 3!!
+"#
+            ))
             .success();
     }
 
@@ -132,7 +148,15 @@ $ echo 'Level 3'
             .current_dir(dir)
             .args(["--recursive"])
             .assert()
-            .stdout("\u{1b}[0;92m$ echo Level 1\u{1b}[0m\nLevel 1\n\u{1b}[0;92m$ echo Level 2\u{1b}[0m\nLevel 2\n")
+            .stdout(format!(
+                r#"{COMMAND_COLOUR}---{NO_COLOUR}
+{COMMAND_COLOUR}$ echo Level 1 {NO_COLOUR}
+Level 1
+{COMMAND_COLOUR}---{NO_COLOUR}
+{COMMAND_COLOUR}$ echo Level 2 {NO_COLOUR}
+Level 2
+"#
+            ))
             .success();
     }
 
