@@ -92,8 +92,7 @@ impl<'a> Display for Command<'a> {
             write!(f, "{}", first_line)?;
 
             for line in command {
-                writeln!(f, " \\")?;
-                write!(f, " {}", line)?;
+                write!(f, "\n{}", line)?;
             }
         }
 
@@ -176,7 +175,6 @@ impl<'a> Commands<'a> {
                 }
 
                 if command_line.ends_with('\\') {
-                    command_line = command_line[..command_line.len() - 1].trim_end();
                     buffer_command.push(command_line);
                     continue;
                 }
@@ -446,7 +444,7 @@ $ java \
             let parsed = Commands::parse(&options);
             let expected = Ok(Commands {
                 commands: vec![Command {
-                    command: vec!["java", "  -jar target/app.jar"],
+                    command: vec!["java \\", "  -jar target/app.jar"],
                 }],
                 execution_mode: Default,
             });
@@ -569,10 +567,10 @@ $ echo "After"
                         command: vec!["echo \"Before\""],
                     },
                     Command {
-                        command: vec!["java", "  -jar target/app-1.jar"],
+                        command: vec!["java \\", "  -jar target/app-1.jar"],
                     },
                     Command {
-                        command: vec!["java", "  -jar target/app-2.jar"],
+                        command: vec!["java \\", "  -jar target/app-2.jar"],
                     },
                     Command {
                         command: vec!["echo \"After\""],
@@ -797,7 +795,7 @@ echo "Goodbye"
         fn format_one_multi_line_command() {
             let commands = Commands {
                 commands: vec![Command {
-                    command: vec!["java", "-jar target/app.jar"],
+                    command: vec!["java \\", " -jar target/app.jar"],
                 }],
                 execution_mode: Default,
             };
@@ -830,10 +828,10 @@ echo "Line 3"
                         command: vec!["echo \"Before\""],
                     },
                     Command {
-                        command: vec!["java", "-jar target/app-1.jar"],
+                        command: vec!["java \\", " -jar target/app-1.jar"],
                     },
                     Command {
-                        command: vec!["java", "-jar target/app-2.jar"],
+                        command: vec!["java \\", " -jar target/app-2.jar"],
                     },
                     Command {
                         command: vec!["echo \"After\""],
