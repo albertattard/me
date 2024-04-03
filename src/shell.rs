@@ -83,7 +83,7 @@ impl ShellScript {
 impl Drop for ShellScript {
     fn drop(&mut self) {
         if fs::remove_file(&self.path).is_err() {
-            eprintln!("Failed to delete the shell script");
+            eprintln!("Failed to delete the auto generated shell script");
         }
     }
 }

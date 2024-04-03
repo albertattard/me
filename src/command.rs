@@ -81,17 +81,17 @@ impl std::error::Error for ParserError {}
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct Command<'a> {
-    command: Vec<&'a str>,
+    lines: Vec<&'a str>,
 }
 
 impl<'a> Display for Command<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let mut command = self.command.iter();
+        let mut lines = self.lines.iter();
 
-        if let Some(first_line) = command.next() {
+        if let Some(first_line) = lines.next() {
             write!(f, "{}", first_line)?;
 
-            for line in command {
+            for line in lines {
                 write!(f, "\n{}", line)?;
             }
         }
@@ -116,7 +116,6 @@ impl<'a> Commands<'a> {
         let mut within_here_document_block = None;
         let mut execute_from_found = false;
         let mut execute_until_found = false;
-        let execute_from = options.execute_from;
 
         for line in options.content.lines() {
             if let Some(offset) = line.find("```shell") {
@@ -131,7 +130,7 @@ impl<'a> Commands<'a> {
                 }
             }
 
-            if let Some(from_line) = execute_from {
+            if let Some(from_line) = options.execute_from {
                 if !execute_from_found && line.trim().eq_ignore_ascii_case(from_line) {
                     execute_from_found = true;
                 } else if !execute_from_found {
@@ -153,7 +152,7 @@ impl<'a> Commands<'a> {
                     buffer_command.push(command_line);
                     if command_line == delimiter {
                         commands.push(Command {
-                            command: buffer_command,
+                            lines: buffer_command,
                         });
                         buffer_command = vec![];
                         within_here_document_block = None;
@@ -190,7 +189,7 @@ impl<'a> Commands<'a> {
                 }
 
                 commands.push(Command {
-                    command: buffer_command,
+                    lines: buffer_command,
                 });
                 buffer_command = vec![];
             }
@@ -203,7 +202,7 @@ impl<'a> Commands<'a> {
             }
         }
 
-        if let Some(from_line) = execute_from {
+        if let Some(from_line) = options.execute_from {
             if !execute_from_found {
                 return ParserError::err(format!(
                     "No line matched the execute from: '{}'",
@@ -214,7 +213,7 @@ impl<'a> Commands<'a> {
 
         if let Some(until_line) = options.execute_until {
             if !execute_until_found {
-                return if let Some(from_line) = execute_from {
+                return if let Some(from_line) = options.execute_from {
                     ParserError::err(format!(
                         "No line matched the execute until: '{}' after the execute from: '{}'",
                         until_line, from_line
@@ -273,7 +272,11 @@ EXECUTE_ALL=false
 
 "#);
                 for (index, command) in self.commands.iter().enumerate() {
-                    let command_to_echo = str::replace(command.to_string().as_str(), "'", "''");
+                    let command_to_echo = str::replace(
+                        command.lines.first().unwrap_or(&"Missing command!!"),
+                        "'",
+                        "''",
+                    );
                     let command_to_execute = command.to_string();
                     let interactive = format!(
                         r#"# Confirms before executing each command.  The command can be skipped and the script exited.
@@ -444,7 +447,7 @@ $ java \
             let parsed = Commands::parse(&options);
             let expected = Ok(Commands {
                 commands: vec![Command {
-                    command: vec!["java \\", "  -jar target/app.jar"],
+                    lines: vec!["java \\", "  -jar target/app.jar"],
                 }],
                 execution_mode: Default,
             });
@@ -471,7 +474,7 @@ EOF
             let parsed = Commands::parse(&options);
             let expected = Ok(Commands {
                 commands: vec![Command {
-                    command: vec![
+                    lines: vec![
                         "patch -p1 -u './Test.java' << EOF",
                         "--- ./Test.java",
                         "+++ ./Test.java",
@@ -509,7 +512,7 @@ EOF
             let parsed = Commands::parse(&options);
             let expected = Ok(Commands {
                 commands: vec![Command {
-                    command: vec![
+                    lines: vec![
                         "patch -p1 -u './Test.java' << EOF",
                         "--- ./Test.java",
                         "+++ ./Test.java",
@@ -564,16 +567,16 @@ $ echo "After"
             let expected = Ok(Commands {
                 commands: vec![
                     Command {
-                        command: vec!["echo \"Before\""],
+                        lines: vec!["echo \"Before\""],
                     },
                     Command {
-                        command: vec!["java \\", "  -jar target/app-1.jar"],
+                        lines: vec!["java \\", "  -jar target/app-1.jar"],
                     },
                     Command {
-                        command: vec!["java \\", "  -jar target/app-2.jar"],
+                        lines: vec!["java \\", "  -jar target/app-2.jar"],
                     },
                     Command {
-                        command: vec!["echo \"After\""],
+                        lines: vec!["echo \"After\""],
                     },
                 ],
                 execution_mode: Default,
@@ -795,7 +798,7 @@ echo "Goodbye"
         fn format_one_multi_line_command() {
             let commands = Commands {
                 commands: vec![Command {
-                    command: vec!["java \\", " -jar target/app.jar"],
+                    lines: vec!["java \\", " -jar target/app.jar"],
                 }],
                 execution_mode: Default,
             };
@@ -825,16 +828,16 @@ echo "Line 3"
             let commands = Commands {
                 commands: vec![
                     Command {
-                        command: vec!["echo \"Before\""],
+                        lines: vec!["echo \"Before\""],
                     },
                     Command {
-                        command: vec!["java \\", " -jar target/app-1.jar"],
+                        lines: vec!["java \\", " -jar target/app-1.jar"],
                     },
                     Command {
-                        command: vec!["java \\", " -jar target/app-2.jar"],
+                        lines: vec!["java \\", " -jar target/app-2.jar"],
                     },
                     Command {
-                        command: vec!["echo \"After\""],
+                        lines: vec!["echo \"After\""],
                     },
                 ],
                 execution_mode: Default,
@@ -1038,7 +1041,7 @@ interactive_2
         let commands = commands
             .iter()
             .map(|command| Command {
-                command: vec![command],
+                lines: vec![command],
             })
             .collect();
         Commands {
