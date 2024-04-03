@@ -50,7 +50,7 @@ impl ShellScript {
     }
 
     fn create_file_path(directory: &Path) -> PathBuf {
-        directory.join(format!("commands-{}.sh", Self::millis_since_epoch()))
+        directory.join(format!(".me-commands-{}.sh", Self::millis_since_epoch()))
     }
 
     fn millis_since_epoch() -> u128 {

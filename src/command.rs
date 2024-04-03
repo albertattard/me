@@ -249,6 +249,15 @@ set -e
         match self.execution_mode {
             Default => {
                 for command in &self.commands {
+                    let command_to_echo = str::replace(
+                        command.lines.first().unwrap_or(&"Missing command!!"),
+                        "'",
+                        "''",
+                    );
+
+                    buffer_command.push_str(
+                        format!("echo '\\033[0;92m$ {command_to_echo}\\033[0m'\n").as_str(),
+                    );
                     buffer_command.push_str(format!("{}\n", command).as_str());
                 }
             }
@@ -857,10 +866,10 @@ echo "After"
         fn format_as_shell_script_with_default_execution() {
             let commands = of_strs(
                 vec![
-                    "echo \"Before\"",
+                    "echo 'Before'",
                     "java -jar target/app-1.jar",
                     "java -jar target/app-2.jar",
-                    "echo \"After\"",
+                    "echo 'After'",
                 ],
                 Default,
             );
@@ -872,10 +881,14 @@ echo "After"
 
 set -e
 
-echo "Before"
+echo '\033[0;92m$ echo ''Before''\033[0m'
+echo 'Before'
+echo '\033[0;92m$ java -jar target/app-1.jar\033[0m'
 java -jar target/app-1.jar
+echo '\033[0;92m$ java -jar target/app-2.jar\033[0m'
 java -jar target/app-2.jar
-echo "After"
+echo '\033[0;92m$ echo ''After''\033[0m'
+echo 'After'
 "#;
             assert_eq!(expected, formatted);
         }

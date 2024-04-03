@@ -53,7 +53,7 @@ $ echo 'Hello world!!'
             .expect("Failed to create test command")
             .current_dir(dir)
             .assert()
-            .stdout("Hello world!!\n")
+            .stdout("\u{1b}[0;92m$ echo Hello world!!\u{1b}[0m\nHello world!!\n")
             .success();
     }
 
@@ -92,7 +92,7 @@ $ echo 'Hello 4!!'
                 "Line \\d+",
             ])
             .assert()
-            .stdout("Hello 2!!\nHello 3!!\n")
+            .stdout("\u{1b}[0;92m$ echo Hello 2!!\u{1b}[0m\nHello 2!!\n\u{1b}[0;92m$ echo Hello 3!!\u{1b}[0m\nHello 3!!\n")
             .success();
     }
 
@@ -132,7 +132,7 @@ $ echo 'Level 3'
             .current_dir(dir)
             .args(["--recursive"])
             .assert()
-            .stdout("Level 1\nLevel 2\n")
+            .stdout("\u{1b}[0;92m$ echo Level 1\u{1b}[0m\nLevel 1\n\u{1b}[0;92m$ echo Level 2\u{1b}[0m\nLevel 2\n")
             .success();
     }
 
