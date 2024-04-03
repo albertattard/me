@@ -329,31 +329,34 @@ impl Display for Commands<'_> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn parse_empty_content() {
-        let content = "";
-        let options = Options::new(content);
-        let parsed = Commands::parse(&options);
-        let expected = ok_empty();
-        assert_eq!(expected, parsed);
-    }
+    mod parser {
+        use super::*;
 
-    #[test]
-    fn parse_content_without_commands() {
-        let content = r#"# README
+        #[test]
+        fn parse_empty_content() {
+            let content = "";
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = ok_empty();
+            assert_eq!(expected, parsed);
+        }
+
+        #[test]
+        fn parse_content_without_commands() {
+            let content = r#"# README
 
 No commands here!!
 "#;
 
-        let options = Options::new(content);
-        let parsed = Commands::parse(&options);
-        let expected = ok_empty();
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = ok_empty();
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_with_one_single_line_command() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_with_one_single_line_command() {
+            let content = r#"# README
 
 Before command
 
@@ -364,15 +367,15 @@ $ ls -la
 After command
 "#;
 
-        let options = Options::new(content);
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["ls -la"], Default);
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(vec!["ls -la"], Default);
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_with_multiple_single_line_command() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_with_multiple_single_line_command() {
+            let content = r#"# README
 
 ```shell
 $ echo "Hello"
@@ -387,18 +390,18 @@ $ echo "Goodbye"
 ```
 "#;
 
-        let options = Options::new(content);
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(
-            vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
-            Default,
-        );
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(
+                vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
+                Default,
+            );
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_with_different_indentation() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_with_different_indentation() {
+            let content = r#"# README
 
 ```shell
 $ echo "Hello"
@@ -417,18 +420,18 @@ $ echo "Hello"
      ```
 "#;
 
-        let options = Options::new(content);
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(
-            vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
-            Default,
-        );
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(
+                vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
+                Default,
+            );
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_with_one_multi_line_command_backslash() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_with_one_multi_line_command_backslash() {
+            let content = r#"# README
 
 ```shell
 $ java \
@@ -436,20 +439,20 @@ $ java \
 ```
 "#;
 
-        let options = Options::new(content);
-        let parsed = Commands::parse(&options);
-        let expected = Ok(Commands {
-            commands: vec![Command {
-                command: vec!["java", "  -jar target/app.jar"],
-            }],
-            execution_mode: Default,
-        });
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = Ok(Commands {
+                commands: vec![Command {
+                    command: vec!["java", "  -jar target/app.jar"],
+                }],
+                execution_mode: Default,
+            });
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_with_one_multi_line_command_here_document_without_indentation() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_with_one_multi_line_command_here_document_without_indentation() {
+            let content = r#"# README
 
 ```shell
 $ patch -p1 -u './Test.java' << EOF
@@ -463,29 +466,29 @@ EOF
 ```
 "#;
 
-        let options = Options::new(content);
-        let parsed = Commands::parse(&options);
-        let expected = Ok(Commands {
-            commands: vec![Command {
-                command: vec![
-                    "patch -p1 -u './Test.java' << EOF",
-                    "--- ./Test.java",
-                    "+++ ./Test.java",
-                    "@@ -1,3 +1,2 @@",
-                    " package demo;",
-                    "",
-                    " -import java.io.Console;",
-                    "EOF",
-                ],
-            }],
-            execution_mode: Default,
-        });
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = Ok(Commands {
+                commands: vec![Command {
+                    command: vec![
+                        "patch -p1 -u './Test.java' << EOF",
+                        "--- ./Test.java",
+                        "+++ ./Test.java",
+                        "@@ -1,3 +1,2 @@",
+                        " package demo;",
+                        "",
+                        " -import java.io.Console;",
+                        "EOF",
+                    ],
+                }],
+                execution_mode: Default,
+            });
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_with_multiple_single_line_commands() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_with_multiple_single_line_commands() {
+            let content = r#"# README
 
 ```shell
 $ echo "Line 1"
@@ -494,18 +497,18 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options = Options::new(content);
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(
-            vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-            Default,
-        );
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(
+                vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
+                Default,
+            );
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_with_multiple_multi_line_commands() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_with_multiple_multi_line_commands() {
+            let content = r#"# README
 
 ```shell
 $ echo "Before"
@@ -517,48 +520,31 @@ $ echo "After"
 ```
 "#;
 
-        let options = Options::new(content);
-        let parsed = Commands::parse(&options);
-        let expected = Ok(Commands {
-            commands: vec![
-                Command {
-                    command: vec!["echo \"Before\""],
-                },
-                Command {
-                    command: vec!["java", "  -jar target/app-1.jar"],
-                },
-                Command {
-                    command: vec!["java", "  -jar target/app-2.jar"],
-                },
-                Command {
-                    command: vec!["echo \"After\""],
-                },
-            ],
-            execution_mode: Default,
-        });
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content);
+            let parsed = Commands::parse(&options);
+            let expected = Ok(Commands {
+                commands: vec![
+                    Command {
+                        command: vec!["echo \"Before\""],
+                    },
+                    Command {
+                        command: vec!["java", "  -jar target/app-1.jar"],
+                    },
+                    Command {
+                        command: vec!["java", "  -jar target/app-2.jar"],
+                    },
+                    Command {
+                        command: vec!["echo \"After\""],
+                    },
+                ],
+                execution_mode: Default,
+            });
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_execute_from() {
-        let content = r#"# README
-
-```shell
-$ echo "Line 1"
-$ echo "Line 2"
-$ echo "Line 3"
-```
-"#;
-
-        let options = Options::new(content).with_execute_from(Some("$ echo \"Line 2\""));
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], Default);
-        assert_eq!(expected, parsed);
-    }
-
-    #[test]
-    fn parse_content_execute_from_when_no_lines_match() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_execute_from() {
+            let content = r#"# README
 
 ```shell
 $ echo "Line 1"
@@ -567,17 +553,15 @@ $ echo "Line 3"
 ```
 "#;
 
-        let from_line = "$ echo \"Line x\"";
-        let options = Options::new(content).with_execute_from(Some(from_line));
-        let parsed = Commands::parse(&options);
-        let expected =
-            ParserError::err(format!("No line matched the execute from: '{}'", from_line));
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content).with_execute_from(Some("$ echo \"Line 2\""));
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], Default);
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_execute_until() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_execute_from_when_no_lines_match() {
+            let content = r#"# README
 
 ```shell
 $ echo "Line 1"
@@ -586,15 +570,34 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options = Options::new(content).with_execute_until(Some("$ echo \"Line 2\""));
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], Default);
-        assert_eq!(expected, parsed);
-    }
+            let from_line = "$ echo \"Line x\"";
+            let options = Options::new(content).with_execute_from(Some(from_line));
+            let parsed = Commands::parse(&options);
+            let expected =
+                ParserError::err(format!("No line matched the execute from: '{}'", from_line));
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_execute_until_when_no_lines_match() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_execute_until() {
+            let content = r#"# README
+
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+```
+"#;
+
+            let options = Options::new(content).with_execute_until(Some("$ echo \"Line 2\""));
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], Default);
+            assert_eq!(expected, parsed);
+        }
+
+        #[test]
+        fn parse_content_execute_until_when_no_lines_match() {
+            let content = r#"# README
 
 ```shell
 $ echo "Line 1"
@@ -603,56 +606,19 @@ $ echo "Line 3"
 ```
 "#;
 
-        let until_line = "$ echo \"Line x\"";
-        let options = Options::new(content).with_execute_until(Some(until_line));
-        let parsed = Commands::parse(&options);
-        let expected = ParserError::err(format!(
-            "No line matched the execute until: '{}'",
-            until_line
-        ));
-        assert_eq!(expected, parsed);
-    }
+            let until_line = "$ echo \"Line x\"";
+            let options = Options::new(content).with_execute_until(Some(until_line));
+            let parsed = Commands::parse(&options);
+            let expected = ParserError::err(format!(
+                "No line matched the execute until: '{}'",
+                until_line
+            ));
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_execute_from_and_until() {
-        let content = r#"# README
-
-```shell
-$ echo "Line 1"
-$ echo "Line 2"
-$ echo "Line 3"
-$ echo "Line 4"
-```
-"#;
-
-        let options = Options::new(content)
-            .with_execute_from(Some("$ echo \"Line 2\""))
-            .with_execute_until(Some("$ echo \"Line 3\""));
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], Default);
-        assert_eq!(expected, parsed);
-    }
-
-    #[test]
-    fn parse_content_execute_from_and_until_same_line() {
-        let content = r#"# README
-
-```shell
-$ echo "Line 1"
-```
-"#;
-
-        let options = Options::new(content)
-            .with_execute_from(Some("$ echo \"Line 1\""))
-            .with_execute_until(Some("$ echo \"Line 1\""));
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 1\""], Default);
-        assert_eq!(expected, parsed);
-    }
-
-    #[test]
-    fn parse_content_execute_from_and_until_when_no_lines_match_until() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_execute_from_and_until() {
+            let content = r#"# README
 
 ```shell
 $ echo "Line 1"
@@ -662,22 +628,59 @@ $ echo "Line 4"
 ```
 "#;
 
-        let from_line = "$ echo \"Line 2\"";
-        let until_line = "$ echo \"Line 1\"";
-        let options = Options::new(content)
-            .with_execute_from(Some(from_line))
-            .with_execute_until(Some(until_line));
-        let parsed = Commands::parse(&options);
-        let expected = ParserError::err(format!(
-            "No line matched the execute until: '{}' after the execute from: '{}'",
-            until_line, from_line
-        ));
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content)
+                .with_execute_from(Some("$ echo \"Line 2\""))
+                .with_execute_until(Some("$ echo \"Line 3\""));
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], Default);
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_execute_from_and_until_when_until_also_exists_before_from() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_execute_from_and_until_same_line() {
+            let content = r#"# README
+
+```shell
+$ echo "Line 1"
+```
+"#;
+
+            let options = Options::new(content)
+                .with_execute_from(Some("$ echo \"Line 1\""))
+                .with_execute_until(Some("$ echo \"Line 1\""));
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(vec!["echo \"Line 1\""], Default);
+            assert_eq!(expected, parsed);
+        }
+
+        #[test]
+        fn parse_content_execute_from_and_until_when_no_lines_match_until() {
+            let content = r#"# README
+
+```shell
+$ echo "Line 1"
+$ echo "Line 2"
+$ echo "Line 3"
+$ echo "Line 4"
+```
+"#;
+
+            let from_line = "$ echo \"Line 2\"";
+            let until_line = "$ echo \"Line 1\"";
+            let options = Options::new(content)
+                .with_execute_from(Some(from_line))
+                .with_execute_until(Some(until_line));
+            let parsed = Commands::parse(&options);
+            let expected = ParserError::err(format!(
+                "No line matched the execute until: '{}' after the execute from: '{}'",
+                until_line, from_line
+            ));
+            assert_eq!(expected, parsed);
+        }
+
+        #[test]
+        fn parse_content_execute_from_and_until_when_until_also_exists_before_from() {
+            let content = r#"# README
 
 ```shell
 $ echo "Line 2"
@@ -687,17 +690,17 @@ $ echo "Line 3"
 ```
 "#;
 
-        let options = Options::new(content)
-            .with_execute_from(Some("$ echo \"Line 1\""))
-            .with_execute_until(Some("$ echo \"Line 2\""));
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], Default);
-        assert_eq!(expected, parsed);
-    }
+            let options = Options::new(content)
+                .with_execute_from(Some("$ echo \"Line 1\""))
+                .with_execute_until(Some("$ echo \"Line 2\""));
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], Default);
+            assert_eq!(expected, parsed);
+        }
 
-    #[test]
-    fn parse_content_skip_commands() {
-        let content = r#"# README
+        #[test]
+        fn parse_content_skip_commands() {
+            let content = r#"# README
 
 ```shell
 $ echo "Line 1"
@@ -707,116 +710,120 @@ $ echo "Line 3"
 ```
 "#;
 
-        let skip_commands = Regex::new(r"Line \d").expect("Invalid skip commands regex");
-        let options = Options::new(content).with_skip_commands(Some(&skip_commands));
-        let parsed = Commands::parse(&options);
-        let expected = ok_of_strs(vec!["echo \"Hello there\""], Default);
-        assert_eq!(expected, parsed);
+            let skip_commands = Regex::new(r"Line \d").expect("Invalid skip commands regex");
+            let options = Options::new(content).with_skip_commands(Some(&skip_commands));
+            let parsed = Commands::parse(&options);
+            let expected = ok_of_strs(vec!["echo \"Hello there\""], Default);
+            assert_eq!(expected, parsed);
+        }
     }
 
-    #[test]
-    fn format_empty_command() {
-        let commands = empty();
-        let formatted = format!("{}", commands);
-        let expected = "";
-        assert_eq!(expected, formatted);
-    }
+    mod formater {
+        use super::*;
 
-    #[test]
-    fn format_one_single_line_command() {
-        let commands = of_strs(vec!["ls -la"], Default);
-        let formatted = format!("{}", commands);
-        let expected = r#"ls -la
+        #[test]
+        fn format_empty_command() {
+            let commands = empty();
+            let formatted = format!("{}", commands);
+            let expected = "";
+            assert_eq!(expected, formatted);
+        }
+
+        #[test]
+        fn format_one_single_line_command() {
+            let commands = of_strs(vec!["ls -la"], Default);
+            let formatted = format!("{}", commands);
+            let expected = r#"ls -la
 "#;
-        assert_eq!(expected, formatted);
-    }
+            assert_eq!(expected, formatted);
+        }
 
-    #[test]
-    fn format_multiple_single_line_command() {
-        let commands = of_strs(
-            vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
-            Default,
-        );
-        let formatted = format!("{}", commands);
-        let expected = r#"echo "Hello"
+        #[test]
+        fn format_multiple_single_line_command() {
+            let commands = of_strs(
+                vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
+                Default,
+            );
+            let formatted = format!("{}", commands);
+            let expected = r#"echo "Hello"
 ls -la
 echo "Goodbye"
 "#;
-        assert_eq!(expected, formatted);
-    }
+            assert_eq!(expected, formatted);
+        }
 
-    #[test]
-    fn format_one_multi_line_command() {
-        let commands = Commands {
-            commands: vec![Command {
-                command: vec!["java", "-jar target/app.jar"],
-            }],
-            execution_mode: Default,
-        };
-        let formatted = format!("{}", commands);
-        let expected = r#"java \
+        #[test]
+        fn format_one_multi_line_command() {
+            let commands = Commands {
+                commands: vec![Command {
+                    command: vec!["java", "-jar target/app.jar"],
+                }],
+                execution_mode: Default,
+            };
+            let formatted = format!("{}", commands);
+            let expected = r#"java \
  -jar target/app.jar
 "#;
-        assert_eq!(expected, formatted);
-    }
+            assert_eq!(expected, formatted);
+        }
 
-    #[test]
-    fn format_multiple_single_line_commands() {
-        let commands = of_strs(
-            vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-            Default,
-        );
-        let formatted = format!("{}", commands);
-        let expected = r#"echo "Line 1"
+        #[test]
+        fn format_multiple_single_line_commands() {
+            let commands = of_strs(
+                vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
+                Default,
+            );
+            let formatted = format!("{}", commands);
+            let expected = r#"echo "Line 1"
 echo "Line 2"
 echo "Line 3"
 "#;
-        assert_eq!(expected, formatted);
-    }
+            assert_eq!(expected, formatted);
+        }
 
-    #[test]
-    fn format_multiple_multi_line_commands() {
-        let commands = Commands {
-            commands: vec![
-                Command {
-                    command: vec!["echo \"Before\""],
-                },
-                Command {
-                    command: vec!["java", "-jar target/app-1.jar"],
-                },
-                Command {
-                    command: vec!["java", "-jar target/app-2.jar"],
-                },
-                Command {
-                    command: vec!["echo \"After\""],
-                },
-            ],
-            execution_mode: Default,
-        };
-        let formatted = format!("{}", commands);
-        let expected = r#"echo "Before"
+        #[test]
+        fn format_multiple_multi_line_commands() {
+            let commands = Commands {
+                commands: vec![
+                    Command {
+                        command: vec!["echo \"Before\""],
+                    },
+                    Command {
+                        command: vec!["java", "-jar target/app-1.jar"],
+                    },
+                    Command {
+                        command: vec!["java", "-jar target/app-2.jar"],
+                    },
+                    Command {
+                        command: vec!["echo \"After\""],
+                    },
+                ],
+                execution_mode: Default,
+            };
+            let formatted = format!("{}", commands);
+            let expected = r#"echo "Before"
 java \
  -jar target/app-1.jar
 java \
  -jar target/app-2.jar
 echo "After"
 "#;
-        assert_eq!(expected, formatted);
-    }
+            assert_eq!(expected, formatted);
+        }
 
-    #[test]
-    fn format_as_shell_script_with_default_execution() {
-        let commands = of_strs(
-            vec![
-                "echo \"Before\"",
-                "java -jar target/app-1.jar",
-                "java -jar target/app-2.jar",
-                "echo \"After\"",
-            ],
-            Default,
-        );
-        let formatted = commands.as_shell_script();
-        let expected = r#"#!/bin/sh
+        #[test]
+        fn format_as_shell_script_with_default_execution() {
+            let commands = of_strs(
+                vec![
+                    "echo \"Before\"",
+                    "java -jar target/app-1.jar",
+                    "java -jar target/app-2.jar",
+                    "echo \"After\"",
+                ],
+                Default,
+            );
+            let formatted = commands.as_shell_script();
+            let expected = r#"#!/bin/sh
 
 # Generated by the MARKDOWN executor
 # This file is automatically deleted once the execution completes
@@ -828,18 +835,18 @@ java -jar target/app-1.jar
 java -jar target/app-2.jar
 echo "After"
 "#;
-        assert_eq!(expected, formatted);
-    }
+            assert_eq!(expected, formatted);
+        }
 
-    #[test]
-    fn format_as_shell_script_with_delay_between_commands_execution() {
-        let commands = of_strs(
-            vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-            DelayBetweenCommands(100),
-        );
+        #[test]
+        fn format_as_shell_script_with_delay_between_commands_execution() {
+            let commands = of_strs(
+                vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
+                DelayBetweenCommands(100),
+            );
 
-        let formatted = commands.as_shell_script();
-        let expected = r#"#!/bin/sh
+            let formatted = commands.as_shell_script();
+            let expected = r#"#!/bin/sh
 
 # Generated by the MARKDOWN executor
 # This file is automatically deleted once the execution completes
@@ -853,18 +860,18 @@ sleep 100
 echo "Line 3"
 "#;
 
-        assert_eq!(expected, formatted);
-    }
+            assert_eq!(expected, formatted);
+        }
 
-    #[test]
-    fn format_as_shell_script_with_interactive_execution() {
-        let commands = of_strs(
-            vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-            Interactive,
-        );
+        #[test]
+        fn format_as_shell_script_with_interactive_execution() {
+            let commands = of_strs(
+                vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
+                Interactive,
+            );
 
-        let formatted = commands.as_shell_script();
-        let expected = r#"#!/bin/sh
+            let formatted = commands.as_shell_script();
+            let expected = r#"#!/bin/sh
 
 # Generated by the MARKDOWN executor
 # This file is automatically deleted once the execution completes
@@ -966,7 +973,8 @@ interactive_2
 
 "#;
 
-        assert_eq!(expected, formatted);
+            assert_eq!(expected, formatted);
+        }
     }
 
     fn ok_empty() -> Result<Commands<'static>, ParserError> {
