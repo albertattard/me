@@ -1,7 +1,8 @@
 use std::fmt::{Debug, Display, Formatter};
 
-use crate::command::ExecutionMode::{Default, DelayBetweenCommands, Interactive};
 use regex::Regex;
+
+use crate::command::ExecutionMode::{Default, DelayBetweenCommands, Interactive};
 
 #[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
 pub(crate) enum ExecutionMode {
@@ -112,36 +113,62 @@ impl<'a> Commands<'a> {
         let mut commands = vec![];
         let mut buffer_command = vec![];
 
-        let mut within_command_block = false;
+        let mut within_command_block = None;
+        let mut within_here_document_block = None;
         let mut execute_from_found = false;
         let mut execute_until_found = false;
         let execute_from = options.execute_from;
 
         for line in options.content.lines() {
-            let trimmed_start_line = line.trim_start();
-
-            if trimmed_start_line.eq("```shell") {
-                within_command_block = true;
+            if let Some(offset) = line.find("```shell") {
+                within_command_block = Some(offset);
                 continue;
             }
 
-            if trimmed_start_line.eq("```") {
-                within_command_block = false;
-                continue;
+            if let Some(offset) = within_command_block {
+                if line[offset..].eq("```") {
+                    within_command_block = None;
+                    continue;
+                }
             }
 
             if let Some(from_line) = execute_from {
-                if !execute_from_found && trimmed_start_line.eq_ignore_ascii_case(from_line) {
+                if !execute_from_found && line.trim().eq_ignore_ascii_case(from_line) {
                     execute_from_found = true;
                 } else if !execute_from_found {
                     continue;
                 }
             }
 
-            if within_command_block {
-                let mut command_line = line.trim_start();
+            if let Some(offset) = within_command_block {
+                let mut command_line = &line[offset..];
                 if command_line.starts_with("$ ") {
-                    command_line = command_line[2..].trim_start();
+                    command_line = &command_line[2..];
+                }
+
+                if let Some(delimiter) = within_here_document_block.as_ref() {
+                    buffer_command.push(command_line);
+                    if line == delimiter {
+                        commands.push(Command {
+                            command: buffer_command,
+                        });
+                        buffer_command = vec![];
+                        within_here_document_block = None;
+                    }
+                    continue;
+                }
+
+                if command_line.contains("<<") {
+                    let parts: Vec<&str> = command_line.splitn(2, "<<").collect();
+                    within_here_document_block = Some(
+                        parts[1]
+                            .trim()
+                            .chars()
+                            .take_while(|&c| c != ' ')
+                            .collect::<String>(),
+                    );
+                    buffer_command.push(command_line);
+                    continue;
                 }
 
                 if command_line.ends_with('\\') {
@@ -168,7 +195,7 @@ impl<'a> Commands<'a> {
 
             if options
                 .execute_until
-                .map_or(false, |m| trimmed_start_line.eq_ignore_ascii_case(m))
+                .map_or(false, |m| line.trim().eq_ignore_ascii_case(m))
             {
                 execute_until_found = true;
                 break;
@@ -400,7 +427,7 @@ $ echo "Hello"
     }
 
     #[test]
-    fn parse_content_with_one_multi_line_command() {
+    fn parse_content_with_one_multi_line_command_backslash() {
         let content = r#"# README
 
 ```shell
@@ -413,7 +440,43 @@ $ java \
         let parsed = Commands::parse(&options);
         let expected = Ok(Commands {
             commands: vec![Command {
-                command: vec!["java", "-jar target/app.jar"],
+                command: vec!["java", "  -jar target/app.jar"],
+            }],
+            execution_mode: Default,
+        });
+        assert_eq!(expected, parsed);
+    }
+
+    #[test]
+    fn parse_content_with_one_multi_line_command_here_document_without_indentation() {
+        let content = r#"# README
+
+```shell
+$ patch -p1 -u './Test.java' << EOF
+--- ./Test.java
++++ ./Test.java
+@@ -1,3 +1,2 @@
+ package demo;
+
+ -import java.io.Console;
+EOF
+```
+"#;
+
+        let options = Options::new(content);
+        let parsed = Commands::parse(&options);
+        let expected = Ok(Commands {
+            commands: vec![Command {
+                command: vec![
+                    "patch -p1 -u './Test.java' << EOF",
+                    "--- ./Test.java",
+                    "+++ ./Test.java",
+                    "@@ -1,3 +1,2 @@",
+                    " package demo;",
+                    "",
+                    " -import java.io.Console;",
+                    "EOF",
+                ],
             }],
             execution_mode: Default,
         });
@@ -462,10 +525,10 @@ $ echo "After"
                     command: vec!["echo \"Before\""],
                 },
                 Command {
-                    command: vec!["java", "-jar target/app-1.jar"],
+                    command: vec!["java", "  -jar target/app-1.jar"],
                 },
                 Command {
-                    command: vec!["java", "-jar target/app-2.jar"],
+                    command: vec!["java", "  -jar target/app-2.jar"],
                 },
                 Command {
                     command: vec!["echo \"After\""],
