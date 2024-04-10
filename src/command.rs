@@ -18,6 +18,7 @@ pub(crate) struct Options<'a> {
     execute_until: Option<&'a str>,
     skip_commands: Option<&'a Regex>,
     execution_mode: ExecutionMode,
+    no_colour: bool,
 }
 
 impl<'a> Options<'a> {
@@ -28,6 +29,7 @@ impl<'a> Options<'a> {
             execute_until: None,
             skip_commands: None,
             execution_mode: Default,
+            no_colour: false,
         }
     }
 
@@ -48,6 +50,11 @@ impl<'a> Options<'a> {
 
     pub(crate) fn with_execution_mode(mut self, execution_mode: ExecutionMode) -> Self {
         self.execution_mode = execution_mode;
+        self
+    }
+
+    pub(crate) fn with_no_colour(mut self, no_colour: bool) -> Self {
+        self.no_colour = no_colour;
         self
     }
 
@@ -105,6 +112,7 @@ pub(crate) struct Commands<'a> {
     /* TODO: Consider switching to a VecDeque given that we pop elements from the front when iterating. */
     commands: Vec<Command<'a>>,
     execution_mode: ExecutionMode,
+    no_colour: bool,
 }
 
 impl<'a> Commands<'a> {
@@ -230,6 +238,7 @@ impl<'a> Commands<'a> {
         Ok(Commands {
             commands,
             execution_mode: options.execution_mode,
+            no_colour: options.no_colour,
         })
     }
 
@@ -249,7 +258,11 @@ set -e
         match self.execution_mode {
             Default => {
                 for command in &self.commands {
-                    buffer_command.push_str("echo '\\033[0;02m---\\033[0m'\n");
+                    if self.no_colour {
+                        buffer_command.push_str("echo '---'\n");
+                    } else {
+                        buffer_command.push_str("echo '\\033[0;02m---\\033[0m'\n");
+                    }
 
                     let mut lines = command
                         .lines
@@ -257,13 +270,22 @@ set -e
                         .map(|line| str::replace(line, "\\", "\\\\"))
                         .map(|line| str::replace(line.as_str(), "'", "'\\''"));
                     if let Some(first_line) = lines.next() {
-                        buffer_command.push_str(
-                            format!("echo '\\033[0;02m$ {first_line}\\033[0m'\n").as_str(),
-                        );
+                        if self.no_colour {
+                            buffer_command.push_str(format!("echo '$ {first_line}'\n").as_str());
+                        } else {
+                            buffer_command.push_str(
+                                format!("echo '\\033[0;02m$ {first_line}\\033[0m'\n").as_str(),
+                            );
+                        };
 
                         for line in lines {
-                            buffer_command
-                                .push_str(format!("echo '\\033[0;02m{line}\\033[0m'\n").as_str());
+                            if self.no_colour {
+                                buffer_command.push_str(format!("echo '> {line}'\n").as_str());
+                            } else {
+                                buffer_command.push_str(
+                                    format!("echo '\\033[0;02m{line}\\033[0m'\n").as_str(),
+                                );
+                            };
                         }
                     }
 
@@ -468,6 +490,7 @@ $ java \
                     lines: vec!["java \\", "  -jar target/app.jar"],
                 }],
                 execution_mode: Default,
+                no_colour: false,
             });
             assert_eq!(expected, parsed);
         }
@@ -504,6 +527,7 @@ EOF
                     ],
                 }],
                 execution_mode: Default,
+                no_colour: false,
             });
             assert_eq!(expected, parsed);
         }
@@ -542,6 +566,7 @@ EOF
                     ],
                 }],
                 execution_mode: Default,
+                no_colour: false,
             });
             assert_eq!(expected, parsed);
         }
@@ -598,6 +623,7 @@ $ echo "After"
                     },
                 ],
                 execution_mode: Default,
+                no_colour: false,
             });
             assert_eq!(expected, parsed);
         }
@@ -819,6 +845,7 @@ echo "Goodbye"
                     lines: vec!["java \\", " -jar target/app.jar"],
                 }],
                 execution_mode: Default,
+                no_colour: false,
             };
             let formatted = format!("{}", commands);
             let expected = r#"java \
@@ -859,6 +886,7 @@ echo "Line 3"
                     },
                 ],
                 execution_mode: Default,
+                no_colour: false,
             };
             let formatted = format!("{}", commands);
             let expected = r#"echo "Before"
@@ -1064,6 +1092,7 @@ interactive_2
         Commands {
             commands: vec![],
             execution_mode: Default,
+            no_colour: false,
         }
     }
 
@@ -1077,6 +1106,7 @@ interactive_2
         Commands {
             commands,
             execution_mode,
+            no_colour: false,
         }
     }
 }

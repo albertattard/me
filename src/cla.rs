@@ -54,6 +54,10 @@ pub(crate) struct Args {
     /// subdirectories and execute each MARKDOWN file from the directory it was found.
     #[arg(short, long, num_args = 0..=1, value_name = "DEPTH", default_missing_value = "2", display_order = 7)]
     recursive: Option<usize>,
+
+    /// Does not use colour when printing to the stdout
+    #[arg(short, long, num_args = 0, required = false)]
+    no_colour: bool,
 }
 
 impl Args {
@@ -81,6 +85,10 @@ impl Args {
         } else {
             ExecutionMode::Default
         }
+    }
+
+    pub(crate) fn no_colour(&self) -> bool {
+        self.no_colour
     }
 
     pub(crate) fn files(&self) -> Vec<MarkdownFile> {

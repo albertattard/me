@@ -22,6 +22,12 @@ Hello, world!
 In this example we only have one _shell_ code block that simply prints
 `Hello, world!`.
 
+You can capture the output into file by redirecting both streams to the file.
+
+```shell
+$ me > output.txt 2>&1
+```
+
 The motivation behind this application is to verify that the examples provided
 in the `README.md` documents work well (do not fail). This ensures that the
 documentation (in the form of MARKDOWN) is still valid even after changes that
@@ -72,8 +78,12 @@ $ me --help
      --silent \
      --location \
      --output "${HOME}/.local/bin/me" \
-     'https://github.com/albertattard/me/releases/download/20240325.152459/me'
+     'https://github.com/albertattard/me/releases/download/20240403.145841/me'
    $ chmod +x "${HOME}/.local/bin/me"
    $ sudo rm -f '/usr/local/bin/me'
    $ sudo ln -s "${HOME}/.local/bin/me" '/usr/local/bin/me'
    ```
+
+## Pending
+
+1. Add a `--no-colour` option
