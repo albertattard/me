@@ -78,7 +78,7 @@ $ me --help
      --silent \
      --location \
      --output "${HOME}/.local/bin/me" \
-     'https://github.com/albertattard/me/releases/download/20240403.145841/me'
+     'https://github.com/albertattard/me/releases/download/20240410.184938/me'
    $ chmod +x "${HOME}/.local/bin/me"
    $ sudo rm -f '/usr/local/bin/me'
    $ sudo ln -s "${HOME}/.local/bin/me" '/usr/local/bin/me'
@@ -86,4 +86,7 @@ $ me --help
 
 ## Pending
 
-1. Add a `--no-colour` option
+1. Improve the `--no-colour` option.
+   This was implemented quickly and requires some thought.
+
+2. Build it for both macOS and Linux.
