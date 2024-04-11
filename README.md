@@ -47,7 +47,7 @@ $ me --help
 
    This application is developed with the
    [rust](https://www.rust-lang.org/tools/install) programming language, version
-   `1.76`.
+   `1.77.2`.
 
    ```shell
    $ cargo clean
