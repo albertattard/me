@@ -270,6 +270,9 @@ set -e
                         .map(|line| str::replace(line, "\\", "\\\\"))
                         .map(|line| str::replace(line.as_str(), "'", "'\\''"));
                     if let Some(first_line) = lines.next() {
+                        if first_line.contains("$") {
+                            buffer_command.push_str("# shellcheck disable=SC2016\n");
+                        }
                         if self.no_colour {
                             buffer_command.push_str(format!("echo '$ {first_line}'\n").as_str());
                         } else {
@@ -283,7 +286,7 @@ set -e
                                 buffer_command.push_str(format!("echo '> {line}'\n").as_str());
                             } else {
                                 buffer_command.push_str(
-                                    format!("echo '\\033[0;02m{line}\\033[0m'\n").as_str(),
+                                    format!("echo '> \\033[0;02m{line}\\033[0m'\n").as_str(),
                                 );
                             };
                         }
