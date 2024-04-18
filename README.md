@@ -78,7 +78,7 @@ $ me --help
      --silent \
      --location \
      --output "${HOME}/.local/bin/me" \
-     'https://github.com/albertattard/me/releases/download/20240416.142419/me'
+     'https://github.com/albertattard/me/releases/latest/download/me'
    $ chmod +x "${HOME}/.local/bin/me"
    ```
 
@@ -102,3 +102,6 @@ $ me --help
      echo "It's false"
    fi
    ```
+
+4. Remove the `--delay-between-commands` and the `--interactive` options as
+   these are not needed anymore.
