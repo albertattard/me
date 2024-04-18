@@ -70,7 +70,7 @@ $ me --help
 
 3. Install the MARKDOWN executor
 
-   **This only works on Linux**.
+   **The binary is compiled for Linux x86**.
 
    ```shell
    $ mkdir -p "${HOME}/.local/bin"
@@ -78,10 +78,8 @@ $ me --help
      --silent \
      --location \
      --output "${HOME}/.local/bin/me" \
-     'https://github.com/albertattard/me/releases/download/20240410.184938/me'
+     'https://github.com/albertattard/me/releases/download/20240416.142419/me'
    $ chmod +x "${HOME}/.local/bin/me"
-   $ sudo rm -f '/usr/local/bin/me'
-   $ sudo ln -s "${HOME}/.local/bin/me" '/usr/local/bin/me'
    ```
 
 ## Pending
@@ -90,3 +88,17 @@ $ me --help
    This was implemented quickly and requires some thought.
 
 2. Build it for both macOS and Linux.
+
+3. Provide better support for multi-line commands.
+
+   The program is able to properly parse multi-line commands that either end
+   with `\` or use the here document (`<<`), but does not handle the other types
+   of multi-line commands well, such as `if` statements as shown below.
+
+   ```shell
+   if [ "${EXP}" ]; then
+     echo "It's true"
+   else
+     echo "It's false"
+   fi
+   ```
