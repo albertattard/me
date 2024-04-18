@@ -20,14 +20,14 @@ pub(crate) struct Args {
     /// this line is ignored.  The matching command is not ignored.  If no matching lines are found,
     /// then the program will panic.  If more than one line matches, the program will start from
     /// the first matching line.
-    #[arg(short = 'b', long)]
+    #[arg(short = 'b', long, num_args = 0..=1, default_missing_value = "---EXECUTE-FROM-HERE---")]
     execute_from: Option<String>,
 
     /// Executes until the given command, or line within the file.  When provided, anything after
     /// this line is ignored.  The matching command is not ignored.  If no matching lines are found,
     /// then the program will panic.  If more than one line matches, the program will stop at the
     /// first matching line.
-    #[arg(short = 'e', long)]
+    #[arg(short = 'e', long, num_args = 0..=1, default_missing_value = "---EXECUTE-UNTIL-HERE---")]
     execute_until: Option<String>,
 
     /// Skips all commands that match the provided regular expression.  Nothing happens if the given
@@ -52,12 +52,18 @@ pub(crate) struct Args {
 
     /// Searches for MARKDOWN files, named README.md or the provided file name, in the
     /// subdirectories and execute each MARKDOWN file from the directory it was found.
-    #[arg(short, long, num_args = 0..=1, value_name = "DEPTH", default_missing_value = "2", display_order = 7)]
+    #[arg(short, long, num_args = 0..=1, value_name = "DEPTH", default_missing_value = "2")]
     recursive: Option<usize>,
 
     /// Does not use colour when printing to the stdout
     #[arg(short, long, num_args = 0, required = false)]
     no_colour: bool,
+
+    /// Prefix all commands with the given command.  For example, say you need to time all commands
+    /// using the `time` command, then you can use this option to prefix all commands found within
+    /// the MARKDOWN file with `time`.
+    #[arg(short, long, value_name = "COMMAND")]
+    prefix_commands_with: Option<String>,
 }
 
 impl Args {
@@ -89,6 +95,10 @@ impl Args {
 
     pub(crate) fn no_colour(&self) -> bool {
         self.no_colour
+    }
+
+    pub(crate) fn prefix_commands_with(&self) -> Option<&str> {
+        self.prefix_commands_with.as_deref()
     }
 
     pub(crate) fn files(&self) -> Vec<MarkdownFile> {
