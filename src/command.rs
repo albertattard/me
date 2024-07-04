@@ -18,7 +18,6 @@ pub(crate) struct Options<'a> {
     execute_until: Option<&'a str>,
     skip_commands: Option<&'a Regex>,
     execution_mode: ExecutionMode,
-    no_colour: bool,
     prefix_commands_with: Option<&'a str>,
 }
 
@@ -30,7 +29,6 @@ impl<'a> Options<'a> {
             execute_until: None,
             skip_commands: None,
             execution_mode: Default,
-            no_colour: false,
             prefix_commands_with: None,
         }
     }
@@ -52,11 +50,6 @@ impl<'a> Options<'a> {
 
     pub(crate) fn with_execution_mode(mut self, execution_mode: ExecutionMode) -> Self {
         self.execution_mode = execution_mode;
-        self
-    }
-
-    pub(crate) fn with_no_colour(mut self, no_colour: bool) -> Self {
-        self.no_colour = no_colour;
         self
     }
 
@@ -119,7 +112,6 @@ pub(crate) struct Commands<'a> {
     /* TODO: Consider switching to a VecDeque given that we pop elements from the front when iterating. */
     commands: Vec<Command<'a>>,
     execution_mode: ExecutionMode,
-    no_colour: bool,
     prefix_commands_with: Option<&'a str>,
 }
 
@@ -246,7 +238,6 @@ impl<'a> Commands<'a> {
         Ok(Commands {
             commands,
             execution_mode: options.execution_mode,
-            no_colour: options.no_colour,
             prefix_commands_with: options.prefix_commands_with,
         })
     }
@@ -267,11 +258,7 @@ set -e
         match self.execution_mode {
             Default => {
                 for command in &self.commands {
-                    if self.no_colour {
-                        buffer_command.push_str("echo '---'\n");
-                    } else {
-                        buffer_command.push_str("echo '\\033[0;02m---\\033[0m'\n");
-                    }
+                    buffer_command.push_str("echo '---'\n");
 
                     let mut lines = command
                         .lines
@@ -282,22 +269,23 @@ set -e
                         if first_line.contains('$') {
                             buffer_command.push_str("# shellcheck disable=SC2016\n");
                         }
-                        if self.no_colour {
-                            buffer_command.push_str(format!("echo '$ {first_line}'\n").as_str());
+                        if first_line.ends_with("\\\\") {
+                            let without_backslash = &first_line[0..first_line.len() - 2];
+                            buffer_command
+                                .push_str(format!("echo '$ {without_backslash}'\\\\\n").as_str());
                         } else {
-                            buffer_command.push_str(
-                                format!("echo '\\033[0;02m$ {first_line}\\033[0m'\n").as_str(),
-                            );
-                        };
+                            buffer_command.push_str(format!("echo '$ {first_line}'\n").as_str());
+                        }
 
                         for line in lines {
-                            if self.no_colour {
-                                buffer_command.push_str(format!("echo '> {line}'\n").as_str());
-                            } else {
+                            if line.ends_with("\\\\") {
+                                let without_backslash = &line[0..line.len() - 2];
                                 buffer_command.push_str(
-                                    format!("echo '> \\033[0;02m{line}\\033[0m'\n").as_str(),
+                                    format!("echo '> {without_backslash}'\\\\\n").as_str(),
                                 );
-                            };
+                            } else {
+                                buffer_command.push_str(format!("echo '> {line}'\n").as_str());
+                            }
                         }
                     }
 
@@ -339,14 +327,14 @@ EXECUTE_ALL=false
 interactive_{index}() {{
 
   if [ "${{EXECUTE_ALL}}" != true ]; then
-    echo '\033[0;02m--------------------------------------------------\033[0m'
-    echo '\033[0;94m>\033[0m \033[0;92m{command_to_echo}\033[0m'
-    echo '\033[0;02m--------------------------------------------------'
+    echo '--------------------------------------------------'
+    echo '> {command_to_echo}'
+    echo '--------------------------------------------------'
     read -r -p 'Press enter to execute,
  A to execute all the remaining commands,
  S to skip and
  X to exit ' input
-    echo '--------------------------------------------------\033[0m'
+    echo '--------------------------------------------------'
 
     case ${{input}} in
       [sS] ) return;;
@@ -506,7 +494,6 @@ $ java \
                     lines: vec!["java \\", "  -jar target/app.jar"],
                 }],
                 execution_mode: Default,
-                no_colour: false,
                 prefix_commands_with: None,
             });
             assert_eq!(expected, parsed);
@@ -544,7 +531,6 @@ EOF
                     ],
                 }],
                 execution_mode: Default,
-                no_colour: false,
                 prefix_commands_with: None,
             });
             assert_eq!(expected, parsed);
@@ -584,7 +570,6 @@ EOF
                     ],
                 }],
                 execution_mode: Default,
-                no_colour: false,
                 prefix_commands_with: None,
             });
             assert_eq!(expected, parsed);
@@ -642,7 +627,6 @@ $ echo "After"
                     },
                 ],
                 execution_mode: Default,
-                no_colour: false,
                 prefix_commands_with: None,
             });
             assert_eq!(expected, parsed);
@@ -865,7 +849,6 @@ echo "Goodbye"
                     lines: vec!["java \\", " -jar target/app.jar"],
                 }],
                 execution_mode: Default,
-                no_colour: false,
                 prefix_commands_with: None,
             };
             let formatted = format!("{}", commands);
@@ -907,7 +890,6 @@ echo "Line 3"
                     },
                 ],
                 execution_mode: Default,
-                no_colour: false,
                 prefix_commands_with: None,
             };
             let formatted = format!("{}", commands);
@@ -923,15 +905,13 @@ echo "After"
 
         #[test]
         fn format_as_shell_script_with_default_execution() {
-            let commands = of_strs(
-                vec![
-                    "echo 'Before'",
-                    "java -jar target/app-1.jar",
-                    "java -jar target/app-2.jar",
-                    "echo 'After'",
-                ],
-                Default,
-            );
+            let commands = Commands {
+                commands: vec![Command {
+                    lines: vec!["java \\", " -XshowSettings:vm \\", " --version"],
+                }],
+                execution_mode: Default,
+                prefix_commands_with: None,
+            };
             let formatted = commands.as_shell_script();
             let expected = r#"#!/bin/sh
 
@@ -940,21 +920,13 @@ echo "After"
 
 set -e
 
-echo '\033[0;02m---\033[0m'
-echo '\033[0;02m$ echo '\''Before'\''\033[0m'
-echo 'Before'
-
-echo '\033[0;02m---\033[0m'
-echo '\033[0;02m$ java -jar target/app-1.jar\033[0m'
-java -jar target/app-1.jar
-
-echo '\033[0;02m---\033[0m'
-echo '\033[0;02m$ java -jar target/app-2.jar\033[0m'
-java -jar target/app-2.jar
-
-echo '\033[0;02m---\033[0m'
-echo '\033[0;02m$ echo '\''After'\''\033[0m'
-echo 'After'
+echo '---'
+echo '$ java '\\
+echo '>  -XshowSettings:vm '\\
+echo '>  --version'
+java \
+ -XshowSettings:vm \
+ --version
 
 "#;
             assert_eq!(expected, formatted);
@@ -1007,14 +979,14 @@ EXECUTE_ALL=false
 interactive_0() {
 
   if [ "${EXECUTE_ALL}" != true ]; then
-    echo '\033[0;02m--------------------------------------------------\033[0m'
-    echo '\033[0;94m>\033[0m \033[0;92mecho "Line 1"\033[0m'
-    echo '\033[0;02m--------------------------------------------------'
+    echo '--------------------------------------------------'
+    echo '> echo "Line 1"'
+    echo '--------------------------------------------------'
     read -r -p 'Press enter to execute,
  A to execute all the remaining commands,
  S to skip and
  X to exit ' input
-    echo '--------------------------------------------------\033[0m'
+    echo '--------------------------------------------------'
 
     case ${input} in
       [sS] ) return;;
@@ -1037,14 +1009,14 @@ interactive_0
 interactive_1() {
 
   if [ "${EXECUTE_ALL}" != true ]; then
-    echo '\033[0;02m--------------------------------------------------\033[0m'
-    echo '\033[0;94m>\033[0m \033[0;92mecho "Line 2"\033[0m'
-    echo '\033[0;02m--------------------------------------------------'
+    echo '--------------------------------------------------'
+    echo '> echo "Line 2"'
+    echo '--------------------------------------------------'
     read -r -p 'Press enter to execute,
  A to execute all the remaining commands,
  S to skip and
  X to exit ' input
-    echo '--------------------------------------------------\033[0m'
+    echo '--------------------------------------------------'
 
     case ${input} in
       [sS] ) return;;
@@ -1067,14 +1039,14 @@ interactive_1
 interactive_2() {
 
   if [ "${EXECUTE_ALL}" != true ]; then
-    echo '\033[0;02m--------------------------------------------------\033[0m'
-    echo '\033[0;94m>\033[0m \033[0;92mecho "Line 3"\033[0m'
-    echo '\033[0;02m--------------------------------------------------'
+    echo '--------------------------------------------------'
+    echo '> echo "Line 3"'
+    echo '--------------------------------------------------'
     read -r -p 'Press enter to execute,
  A to execute all the remaining commands,
  S to skip and
  X to exit ' input
-    echo '--------------------------------------------------\033[0m'
+    echo '--------------------------------------------------'
 
     case ${input} in
       [sS] ) return;;
@@ -1113,7 +1085,6 @@ interactive_2
                     },
                 ],
                 execution_mode: Default,
-                no_colour: true,
                 prefix_commands_with: Some("time"),
             };
 
@@ -1158,7 +1129,6 @@ time echo "Line 3"
         Commands {
             commands: vec![],
             execution_mode: Default,
-            no_colour: false,
             prefix_commands_with: None,
         }
     }
@@ -1173,7 +1143,6 @@ time echo "Line 3"
         Commands {
             commands,
             execution_mode,
-            no_colour: false,
             prefix_commands_with: None,
         }
     }

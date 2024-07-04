@@ -55,10 +55,6 @@ pub(crate) struct Args {
     #[arg(short, long, num_args = 0..=1, value_name = "DEPTH", default_missing_value = "2")]
     recursive: Option<usize>,
 
-    /// Does not use colour when printing to the stdout
-    #[arg(short, long, num_args = 0, required = false)]
-    no_colour: bool,
-
     /// Prefix all commands with the given command.  For example, say you need to time all commands
     /// using the `time` command, then you can use this option to prefix all commands found within
     /// the MARKDOWN file with `time`.
@@ -91,10 +87,6 @@ impl Args {
         } else {
             ExecutionMode::Default
         }
-    }
-
-    pub(crate) fn no_colour(&self) -> bool {
-        self.no_colour
     }
 
     pub(crate) fn prefix_commands_with(&self) -> Option<&str> {

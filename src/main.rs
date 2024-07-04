@@ -17,7 +17,6 @@ fn main() {
             .with_execute_until(args.execute_until())
             .with_skip_commands(args.skip_commands())
             .with_execution_mode(args.execution_mode())
-            .with_no_colour(args.no_colour())
             .with_prefix_commands(args.prefix_commands_with())
             .build()
             .as_shell_script();
@@ -34,9 +33,6 @@ mod tests {
     use std::path::Path;
 
     use assert_cmd::Command;
-
-    const COMMAND_COLOUR: &str = "\u{1b}[0;02m";
-    const NO_COLOUR: &str = "\u{1b}[0m";
 
     #[test]
     fn run_with_no_args() {
@@ -58,12 +54,12 @@ $ echo 'Hello world!!'
             .expect("Failed to create test command")
             .current_dir(dir)
             .assert()
-            .stdout(format!(
-                r#"{COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo 'Hello world!!'{NO_COLOUR}
+            .stdout(
+                r#"---
+$ echo 'Hello world!!'
 Hello world!!
-"#
-            ))
+"#,
+            )
             .success();
     }
 
@@ -103,11 +99,11 @@ $ echo 'Hello 4!!'
             ])
             .assert()
             .stdout(format!(
-                r#"{COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo 'Hello 2!!'{NO_COLOUR}
+                r#"---
+$ echo 'Hello 2!!'
 Hello 2!!
-{COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo 'Hello 3!!'{NO_COLOUR}
+---
+$ echo 'Hello 3!!'
 Hello 3!!
 "#
             ))
@@ -150,15 +146,16 @@ $ echo 'Level 3'
             .current_dir(dir)
             .args(["--recursive"])
             .assert()
-            .stdout(format!(
-                r#"{COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo 'Level 1'{NO_COLOUR}
+            .stdout(
+                r#"---
+$ echo 'Level 1'
 Level 1
-{COMMAND_COLOUR}---{NO_COLOUR}
-{COMMAND_COLOUR}$ echo 'Level 2'{NO_COLOUR}
+---
+$ echo 'Level 2'
 Level 2
 "#
-            ))
+                .to_string(),
+            )
             .success();
     }
 
