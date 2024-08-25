@@ -266,19 +266,11 @@ echo "Goodbye"
 
             let options = Options::new(content);
             let parsed = CommandsBlocks::parse(&options);
-            let expected = Ok(CommandsBlocks {
-                commands: vec![
-                    CommandBlock {
-                        lines: vec!["echo \"Hello\""],
-                    },
-                    CommandBlock {
-                        lines: vec!["ls -la"],
-                    },
-                    CommandBlock {
-                        lines: vec!["echo \"Goodbye\""],
-                    },
-                ],
-            });
+            let expected = ok_of_multi_strs(vec![
+                vec!["echo \"Hello\""],
+                vec!["ls -la"],
+                vec!["echo \"Goodbye\""],
+            ]);
             assert_eq!(expected, parsed);
         }
 
@@ -305,19 +297,11 @@ echo "Hello"
 
             let options = Options::new(content);
             let parsed = CommandsBlocks::parse(&options);
-            let expected = Ok(CommandsBlocks {
-                commands: vec![
-                    CommandBlock {
-                        lines: vec!["echo \"Hello\""],
-                    },
-                    CommandBlock {
-                        lines: vec!["ls -la"],
-                    },
-                    CommandBlock {
-                        lines: vec!["echo \"Goodbye\""],
-                    },
-                ],
-            });
+            let expected = ok_of_multi_strs(vec![
+                vec!["echo \"Hello\""],
+                vec!["ls -la"],
+                vec!["echo \"Goodbye\""],
+            ]);
             assert_eq!(expected, parsed);
         }
 
@@ -333,11 +317,7 @@ java \
 
             let options = Options::new(content);
             let parsed = CommandsBlocks::parse(&options);
-            let expected = Ok(CommandsBlocks {
-                commands: vec![CommandBlock {
-                    lines: vec!["java \\", "  -jar target/app.jar"],
-                }],
-            });
+            let expected = ok_of_strs(vec!["java \\", "  -jar target/app.jar"]);
             assert_eq!(expected, parsed);
         }
 
@@ -359,20 +339,16 @@ EOF
 
             let options = Options::new(content);
             let parsed = CommandsBlocks::parse(&options);
-            let expected = Ok(CommandsBlocks {
-                commands: vec![CommandBlock {
-                    lines: vec![
-                        "patch -p1 -u './Test.java' << EOF",
-                        "--- ./Test.java",
-                        "+++ ./Test.java",
-                        "@@ -1,3 +1,2 @@",
-                        " package demo;",
-                        "",
-                        " -import java.io.Console;",
-                        "EOF",
-                    ],
-                }],
-            });
+            let expected = ok_of_strs(vec![
+                "patch -p1 -u './Test.java' << EOF",
+                "--- ./Test.java",
+                "+++ ./Test.java",
+                "@@ -1,3 +1,2 @@",
+                " package demo;",
+                "",
+                " -import java.io.Console;",
+                "EOF",
+            ]);
             assert_eq!(expected, parsed);
         }
 
@@ -396,20 +372,16 @@ EOF
 
             let options = Options::new(content);
             let parsed = CommandsBlocks::parse(&options);
-            let expected = Ok(CommandsBlocks {
-                commands: vec![CommandBlock {
-                    lines: vec![
-                        "patch -p1 -u './Test.java' << EOF",
-                        "--- ./Test.java",
-                        "+++ ./Test.java",
-                        "@@ -1,3 +1,2 @@",
-                        " package demo;",
-                        "",
-                        " -import java.io.Console;",
-                        "EOF",
-                    ],
-                }],
-            });
+            let expected = ok_of_strs(vec![
+                "patch -p1 -u './Test.java' << EOF",
+                "--- ./Test.java",
+                "+++ ./Test.java",
+                "@@ -1,3 +1,2 @@",
+                " package demo;",
+                "",
+                " -import java.io.Console;",
+                "EOF",
+            ]);
             assert_eq!(expected, parsed);
         }
 
@@ -428,17 +400,13 @@ done
 
             let options = Options::new(content);
             let parsed = CommandsBlocks::parse(&options);
-            let expected = Ok(CommandsBlocks {
-                commands: vec![CommandBlock {
-                    lines: vec![
-                        "while [ \"$(curl --silent --output /dev/null --write-out '%{http_code}' 'http://localhost:8080')\" -ne '200' ]",
-                        "do",
-                        "  echo 'Waiting for the application to start'",
-                        "  sleep 1",
-                        "done",
-                    ],
-                }],
-            });
+            let expected = ok_of_strs(vec![
+                "while [ \"$(curl --silent --output /dev/null --write-out '%{http_code}' 'http://localhost:8080')\" -ne '200' ]",
+                "do",
+                "  echo 'Waiting for the application to start'",
+                "  sleep 1",
+                "done",
+            ]);
             assert_eq!(expected, parsed);
         }
 
@@ -549,11 +517,7 @@ echo "Goodbye"
 
         #[test]
         fn format_one_multi_line_command() {
-            let commands = CommandsBlocks {
-                commands: vec![CommandBlock {
-                    lines: vec!["java \\", " -jar target/app.jar"],
-                }],
-            };
+            let commands = of_strs(vec!["java \\", " -jar target/app.jar"]);
             let formatted = format!("{}", commands);
             let expected = r#"java \
  -jar target/app.jar
@@ -578,22 +542,13 @@ echo "Line 3"
 
         #[test]
         fn format_multiple_multi_line_commands() {
-            let commands = CommandsBlocks {
-                commands: vec![
-                    CommandBlock {
-                        lines: vec!["echo \"Before\""],
-                    },
-                    CommandBlock {
-                        lines: vec!["java \\", " -jar target/app-1.jar"],
-                    },
-                    CommandBlock {
-                        lines: vec!["java \\", " -jar target/app-2.jar"],
-                    },
-                    CommandBlock {
-                        lines: vec!["echo \"After\""],
-                    },
-                ],
-            };
+            let commands = of_multi_strs(vec![
+                vec!["echo \"Before\""],
+                vec!["java \\", " -jar target/app-1.jar"],
+                vec!["java \\", " -jar target/app-2.jar"],
+                vec!["echo \"After\""],
+            ]);
+
             let formatted = format!("{}", commands);
             let expected = r#"echo "Before"
 java \
@@ -637,17 +592,33 @@ java \
         Ok(empty())
     }
 
-    fn ok_of_strs(commands: Vec<&str>) -> Result<CommandsBlocks<'_>, ParserError> {
-        Ok(of_strs(commands))
-    }
-
     fn empty() -> CommandsBlocks<'static> {
         CommandsBlocks { commands: vec![] }
     }
 
-    fn of_strs(commands: Vec<&str>) -> CommandsBlocks<'_> {
+    fn ok_of_strs(single_block_commands: Vec<&str>) -> Result<CommandsBlocks<'_>, ParserError> {
+        Ok(of_strs(single_block_commands))
+    }
+
+    fn of_strs(single_block_commands: Vec<&str>) -> CommandsBlocks<'_> {
         CommandsBlocks {
-            commands: vec![CommandBlock { lines: commands }],
+            commands: vec![CommandBlock {
+                lines: single_block_commands,
+            }],
         }
+    }
+
+    fn ok_of_multi_strs(
+        multi_blocks_commands: Vec<Vec<&str>>,
+    ) -> Result<CommandsBlocks<'_>, ParserError> {
+        Ok(of_multi_strs(multi_blocks_commands))
+    }
+
+    fn of_multi_strs(multi_blocks_commands: Vec<Vec<&str>>) -> CommandsBlocks<'_> {
+        let commands = multi_blocks_commands
+            .into_iter()
+            .map(|lines| CommandBlock { lines })
+            .collect();
+        CommandsBlocks { commands }
     }
 }
