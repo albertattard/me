@@ -125,11 +125,6 @@ impl<'a> CommandsBlocks<'a> {
                     command_line = &command_line[2..];
                 }
 
-                if command_line.ends_with('\\') {
-                    buffered_commands.push(command_line);
-                    continue;
-                }
-
                 buffered_commands.push(command_line);
 
                 /* Check if the command needs to be skipped and clear the buffer if so */
