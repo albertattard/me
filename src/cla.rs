@@ -3,7 +3,6 @@ use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::{env, fs};
 
-use crate::command::ExecutionMode;
 use clap::Parser;
 use regex::Regex;
 use walkdir::WalkDir;
@@ -35,21 +34,6 @@ pub(crate) struct Args {
     #[arg(short, long)]
     skip_commands: Option<Regex>,
 
-    /// Introduce a delay (in milliseconds) between each command
-    #[arg(short, long, conflicts_with = "interactive")]
-    delay_between_commands: Option<u32>,
-
-    /// Prompts for a confirmation before executing each command, ideal when debugging a problem
-    /// with a MARKDOWN file.
-    #[arg(
-        short,
-        long,
-        conflicts_with = "delay_between_commands",
-        num_args = 0,
-        required = false
-    )]
-    interactive: bool,
-
     /// Searches for MARKDOWN files, named README.md or the provided file name, in the
     /// subdirectories and execute each MARKDOWN file from the directory it was found.
     #[arg(short, long, num_args = 0..=1, value_name = "DEPTH", default_missing_value = "2")]
@@ -71,16 +55,6 @@ impl Args {
 
     pub(crate) fn skip_commands(&self) -> Option<&Regex> {
         self.skip_commands.as_ref()
-    }
-
-    pub(crate) fn execution_mode(&self) -> ExecutionMode {
-        if self.interactive {
-            ExecutionMode::Interactive
-        } else if let Some(delay_in_millis) = self.delay_between_commands {
-            ExecutionMode::DelayBetweenCommands(delay_in_millis)
-        } else {
-            ExecutionMode::Default
-        }
     }
 
     pub(crate) fn files(&self) -> Vec<MarkdownFile> {

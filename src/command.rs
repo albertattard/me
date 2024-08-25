@@ -2,22 +2,12 @@ use std::fmt::{Debug, Display, Formatter};
 
 use regex::Regex;
 
-use crate::command::ExecutionMode::{Default, DelayBetweenCommands, Interactive};
-
-#[derive(Debug, Ord, PartialOrd, Eq, PartialEq, Copy, Clone)]
-pub(crate) enum ExecutionMode {
-    Default,
-    DelayBetweenCommands(u32),
-    Interactive,
-}
-
 #[derive(Debug)]
 pub(crate) struct Options<'a> {
     content: &'a str,
     execute_from: Option<&'a str>,
     execute_until: Option<&'a str>,
     skip_commands: Option<&'a Regex>,
-    execution_mode: ExecutionMode,
 }
 
 impl<'a> Options<'a> {
@@ -27,7 +17,6 @@ impl<'a> Options<'a> {
             execute_from: None,
             execute_until: None,
             skip_commands: None,
-            execution_mode: Default,
         }
     }
 
@@ -43,11 +32,6 @@ impl<'a> Options<'a> {
 
     pub(crate) fn with_skip_commands(mut self, skip_commands: Option<&'a Regex>) -> Self {
         self.skip_commands = skip_commands;
-        self
-    }
-
-    pub(crate) fn with_execution_mode(mut self, execution_mode: ExecutionMode) -> Self {
-        self.execution_mode = execution_mode;
         self
     }
 
@@ -104,7 +88,6 @@ impl<'a> Display for Command<'a> {
 pub(crate) struct Commands<'a> {
     /* TODO: Consider switching to a VecDeque given that we pop elements from the front when iterating. */
     commands: Vec<Command<'a>>,
-    execution_mode: ExecutionMode,
 }
 
 impl<'a> Commands<'a> {
@@ -227,10 +210,7 @@ impl<'a> Commands<'a> {
             }
         }
 
-        Ok(Commands {
-            commands,
-            execution_mode: options.execution_mode,
-        })
+        Ok(Commands { commands })
     }
 
     pub(crate) fn as_shell_script(&self) -> String {
@@ -246,105 +226,37 @@ set -e
 "#,
         );
 
-        match self.execution_mode {
-            Default => {
-                for command in &self.commands {
-                    buffer_command.push_str("echo '---'\n");
+        for command in &self.commands {
+            buffer_command.push_str("echo '---'\n");
 
-                    let mut lines = command
-                        .lines
-                        .iter()
-                        .map(|line| str::replace(line, "\\", "\\\\"))
-                        .map(|line| str::replace(line.as_str(), "'", "'\\''"));
-                    if let Some(first_line) = lines.next() {
-                        if first_line.contains('$') {
-                            buffer_command.push_str("# shellcheck disable=SC2016\n");
-                        }
-                        if first_line.ends_with("\\\\") {
-                            let without_backslash = &first_line[0..first_line.len() - 2];
-                            buffer_command
-                                .push_str(format!("echo '$ {without_backslash}'\\\\\n").as_str());
-                        } else {
-                            buffer_command.push_str(format!("echo '$ {first_line}'\n").as_str());
-                        }
-
-                        for line in lines {
-                            if line.ends_with("\\\\") {
-                                let without_backslash = &line[0..line.len() - 2];
-                                buffer_command.push_str(
-                                    format!("echo '> {without_backslash}'\\\\\n").as_str(),
-                                );
-                            } else {
-                                buffer_command.push_str(format!("echo '> {line}'\n").as_str());
-                            }
-                        }
-                    }
-
-                    buffer_command.push_str(format!("{command}\n\n").as_str());
+            let mut lines = command
+                .lines
+                .iter()
+                .map(|line| str::replace(line, "\\", "\\\\"))
+                .map(|line| str::replace(line.as_str(), "'", "'\\''"));
+            if let Some(first_line) = lines.next() {
+                if first_line.contains('$') {
+                    buffer_command.push_str("# shellcheck disable=SC2016\n");
                 }
-            }
+                if first_line.ends_with("\\\\") {
+                    let without_backslash = &first_line[0..first_line.len() - 2];
+                    buffer_command.push_str(format!("echo '$ {without_backslash}'\\\\\n").as_str());
+                } else {
+                    buffer_command.push_str(format!("echo '$ {first_line}'\n").as_str());
+                }
 
-            DelayBetweenCommands(delay_in_millis) => {
-                let mut commands = self.commands.iter();
-
-                if let Some(first_command) = commands.next() {
-                    buffer_command.push_str(format!("{}\n", first_command).as_str());
-
-                    for command in commands {
-                        buffer_command.push_str(format!("sleep {}\n", delay_in_millis).as_str());
-                        buffer_command.push_str(format!("{}\n", command).as_str());
+                for line in lines {
+                    if line.ends_with("\\\\") {
+                        let without_backslash = &line[0..line.len() - 2];
+                        buffer_command
+                            .push_str(format!("echo '> {without_backslash}'\\\\\n").as_str());
+                    } else {
+                        buffer_command.push_str(format!("echo '> {line}'\n").as_str());
                     }
                 }
             }
 
-            Interactive => {
-                buffer_command.push_str(r#"# When set to true, it will execute the remaining commands without interaction
-EXECUTE_ALL=false
-
-"#);
-                for (index, command) in self.commands.iter().enumerate() {
-                    let command_to_echo = str::replace(
-                        command.lines.first().unwrap_or(&"Missing command!!"),
-                        "'",
-                        "''",
-                    );
-                    let command_to_execute = command.to_string();
-                    let interactive = format!(
-                        r#"# Confirms before executing each command.  The command can be skipped and the script exited.
-interactive_{index}() {{
-
-  if [ "${{EXECUTE_ALL}}" != true ]; then
-    echo '--------------------------------------------------'
-    echo '> {command_to_echo}'
-    echo '--------------------------------------------------'
-    read -r -p 'Press enter to execute,
- A to execute all the remaining commands,
- S to skip and
- X to exit ' input
-    echo '--------------------------------------------------'
-
-    case ${{input}} in
-      [sS] ) return;;
-      [xX] ) exit 0;;
-      [aA] ) EXECUTE_ALL=true;
-        ;;
-      * )
-        ;;
-    esac
-  fi
-
-  # Execute the command
-  {command_to_execute}
-}}
-
-interactive_{index}
-
-
-"#
-                    );
-                    buffer_command.push_str(interactive.as_str());
-                }
-            }
+            buffer_command.push_str(format!("{command}\n\n").as_str());
         }
 
         buffer_command
@@ -404,7 +316,7 @@ After command
 
             let options = Options::new(content);
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(vec!["ls -la"], Default);
+            let expected = ok_of_strs(vec!["ls -la"]);
             assert_eq!(expected, parsed);
         }
 
@@ -427,10 +339,7 @@ $ echo "Goodbye"
 
             let options = Options::new(content);
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(
-                vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
-                Default,
-            );
+            let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
             assert_eq!(expected, parsed);
         }
 
@@ -457,10 +366,7 @@ $ echo "Hello"
 
             let options = Options::new(content);
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(
-                vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
-                Default,
-            );
+            let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
             assert_eq!(expected, parsed);
         }
 
@@ -480,7 +386,6 @@ $ java \
                 commands: vec![Command {
                     lines: vec!["java \\", "  -jar target/app.jar"],
                 }],
-                execution_mode: Default,
             });
             assert_eq!(expected, parsed);
         }
@@ -516,7 +421,6 @@ EOF
                         "EOF",
                     ],
                 }],
-                execution_mode: Default,
             });
             assert_eq!(expected, parsed);
         }
@@ -554,7 +458,6 @@ EOF
                         "EOF",
                     ],
                 }],
-                execution_mode: Default,
             });
             assert_eq!(expected, parsed);
         }
@@ -572,10 +475,11 @@ $ echo "Line 3"
 
             let options = Options::new(content);
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(
-                vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-                Default,
-            );
+            let expected = ok_of_strs(vec![
+                "echo \"Line 1\"",
+                "echo \"Line 2\"",
+                "echo \"Line 3\"",
+            ]);
             assert_eq!(expected, parsed);
         }
 
@@ -610,7 +514,6 @@ $ echo "After"
                         lines: vec!["echo \"After\""],
                     },
                 ],
-                execution_mode: Default,
             });
             assert_eq!(expected, parsed);
         }
@@ -628,7 +531,7 @@ $ echo "Line 3"
 
             let options = Options::new(content).with_execute_from(Some("$ echo \"Line 2\""));
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], Default);
+            let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
             assert_eq!(expected, parsed);
         }
 
@@ -664,7 +567,7 @@ $ echo "Line 3"
 
             let options = Options::new(content).with_execute_until(Some("$ echo \"Line 2\""));
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], Default);
+            let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""]);
             assert_eq!(expected, parsed);
         }
 
@@ -705,7 +608,7 @@ $ echo "Line 4"
                 .with_execute_from(Some("$ echo \"Line 2\""))
                 .with_execute_until(Some("$ echo \"Line 3\""));
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""], Default);
+            let expected = ok_of_strs(vec!["echo \"Line 2\"", "echo \"Line 3\""]);
             assert_eq!(expected, parsed);
         }
 
@@ -722,7 +625,7 @@ $ echo "Line 1"
                 .with_execute_from(Some("$ echo \"Line 1\""))
                 .with_execute_until(Some("$ echo \"Line 1\""));
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(vec!["echo \"Line 1\""], Default);
+            let expected = ok_of_strs(vec!["echo \"Line 1\""]);
             assert_eq!(expected, parsed);
         }
 
@@ -767,7 +670,7 @@ $ echo "Line 3"
                 .with_execute_from(Some("$ echo \"Line 1\""))
                 .with_execute_until(Some("$ echo \"Line 2\""));
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""], Default);
+            let expected = ok_of_strs(vec!["echo \"Line 1\"", "echo \"Line 2\""]);
             assert_eq!(expected, parsed);
         }
 
@@ -786,7 +689,7 @@ $ echo "Line 3"
             let skip_commands = Regex::new(r"Line \d").expect("Invalid skip commands regex");
             let options = Options::new(content).with_skip_commands(Some(&skip_commands));
             let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(vec!["echo \"Hello there\""], Default);
+            let expected = ok_of_strs(vec!["echo \"Hello there\""]);
             assert_eq!(expected, parsed);
         }
     }
@@ -804,7 +707,7 @@ $ echo "Line 3"
 
         #[test]
         fn format_one_single_line_command() {
-            let commands = of_strs(vec!["ls -la"], Default);
+            let commands = of_strs(vec!["ls -la"]);
             let formatted = format!("{}", commands);
             let expected = r#"ls -la
 "#;
@@ -813,10 +716,7 @@ $ echo "Line 3"
 
         #[test]
         fn format_multiple_single_line_command() {
-            let commands = of_strs(
-                vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""],
-                Default,
-            );
+            let commands = of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
             let formatted = format!("{}", commands);
             let expected = r#"echo "Hello"
 ls -la
@@ -831,7 +731,6 @@ echo "Goodbye"
                 commands: vec![Command {
                     lines: vec!["java \\", " -jar target/app.jar"],
                 }],
-                execution_mode: Default,
             };
             let formatted = format!("{}", commands);
             let expected = r#"java \
@@ -842,10 +741,11 @@ echo "Goodbye"
 
         #[test]
         fn format_multiple_single_line_commands() {
-            let commands = of_strs(
-                vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-                Default,
-            );
+            let commands = of_strs(vec![
+                "echo \"Line 1\"",
+                "echo \"Line 2\"",
+                "echo \"Line 3\"",
+            ]);
             let formatted = format!("{}", commands);
             let expected = r#"echo "Line 1"
 echo "Line 2"
@@ -871,7 +771,6 @@ echo "Line 3"
                         lines: vec!["echo \"After\""],
                     },
                 ],
-                execution_mode: Default,
             };
             let formatted = format!("{}", commands);
             let expected = r#"echo "Before"
@@ -890,7 +789,6 @@ echo "After"
                 commands: vec![Command {
                     lines: vec!["java \\", " -XshowSettings:vm \\", " --version"],
                 }],
-                execution_mode: Default,
             };
             let formatted = commands.as_shell_script();
             let expected = r#"#!/bin/sh
@@ -911,174 +809,27 @@ java \
 "#;
             assert_eq!(expected, formatted);
         }
-
-        #[test]
-        fn format_as_shell_script_with_delay_between_commands_execution() {
-            let commands = of_strs(
-                vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-                DelayBetweenCommands(100),
-            );
-
-            let formatted = commands.as_shell_script();
-            let expected = r#"#!/bin/sh
-
-# Generated by the MARKDOWN executor
-# This file is automatically deleted once the execution completes
-
-set -e
-
-echo "Line 1"
-sleep 100
-echo "Line 2"
-sleep 100
-echo "Line 3"
-"#;
-
-            assert_eq!(expected, formatted);
-        }
-
-        #[test]
-        fn format_as_shell_script_with_interactive_execution() {
-            let commands = of_strs(
-                vec!["echo \"Line 1\"", "echo \"Line 2\"", "echo \"Line 3\""],
-                Interactive,
-            );
-
-            let formatted = commands.as_shell_script();
-            let expected = r#"#!/bin/sh
-
-# Generated by the MARKDOWN executor
-# This file is automatically deleted once the execution completes
-
-set -e
-
-# When set to true, it will execute the remaining commands without interaction
-EXECUTE_ALL=false
-
-# Confirms before executing each command.  The command can be skipped and the script exited.
-interactive_0() {
-
-  if [ "${EXECUTE_ALL}" != true ]; then
-    echo '--------------------------------------------------'
-    echo '> echo "Line 1"'
-    echo '--------------------------------------------------'
-    read -r -p 'Press enter to execute,
- A to execute all the remaining commands,
- S to skip and
- X to exit ' input
-    echo '--------------------------------------------------'
-
-    case ${input} in
-      [sS] ) return;;
-      [xX] ) exit 0;;
-      [aA] ) EXECUTE_ALL=true;
-        ;;
-      * )
-        ;;
-    esac
-  fi
-
-  # Execute the command
-  echo "Line 1"
-}
-
-interactive_0
-
-
-# Confirms before executing each command.  The command can be skipped and the script exited.
-interactive_1() {
-
-  if [ "${EXECUTE_ALL}" != true ]; then
-    echo '--------------------------------------------------'
-    echo '> echo "Line 2"'
-    echo '--------------------------------------------------'
-    read -r -p 'Press enter to execute,
- A to execute all the remaining commands,
- S to skip and
- X to exit ' input
-    echo '--------------------------------------------------'
-
-    case ${input} in
-      [sS] ) return;;
-      [xX] ) exit 0;;
-      [aA] ) EXECUTE_ALL=true;
-        ;;
-      * )
-        ;;
-    esac
-  fi
-
-  # Execute the command
-  echo "Line 2"
-}
-
-interactive_1
-
-
-# Confirms before executing each command.  The command can be skipped and the script exited.
-interactive_2() {
-
-  if [ "${EXECUTE_ALL}" != true ]; then
-    echo '--------------------------------------------------'
-    echo '> echo "Line 3"'
-    echo '--------------------------------------------------'
-    read -r -p 'Press enter to execute,
- A to execute all the remaining commands,
- S to skip and
- X to exit ' input
-    echo '--------------------------------------------------'
-
-    case ${input} in
-      [sS] ) return;;
-      [xX] ) exit 0;;
-      [aA] ) EXECUTE_ALL=true;
-        ;;
-      * )
-        ;;
-    esac
-  fi
-
-  # Execute the command
-  echo "Line 3"
-}
-
-interactive_2
-
-
-"#;
-
-            assert_eq!(expected, formatted);
-        }
     }
 
     fn ok_empty() -> Result<Commands<'static>, ParserError> {
         Ok(empty())
     }
 
-    fn ok_of_strs(
-        commands: Vec<&str>,
-        execution_mode: ExecutionMode,
-    ) -> Result<Commands<'_>, ParserError> {
-        Ok(of_strs(commands, execution_mode))
+    fn ok_of_strs(commands: Vec<&str>) -> Result<Commands<'_>, ParserError> {
+        Ok(of_strs(commands))
     }
 
     fn empty() -> Commands<'static> {
-        Commands {
-            commands: vec![],
-            execution_mode: Default,
-        }
+        Commands { commands: vec![] }
     }
 
-    fn of_strs(commands: Vec<&str>, execution_mode: ExecutionMode) -> Commands<'_> {
+    fn of_strs(commands: Vec<&str>) -> Commands<'_> {
         let commands = commands
             .iter()
             .map(|command| Command {
                 lines: vec![command],
             })
             .collect();
-        Commands {
-            commands,
-            execution_mode,
-        }
+        Commands { commands }
     }
 }

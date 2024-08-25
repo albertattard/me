@@ -84,12 +84,9 @@ $ me --help
 
 ## Pending
 
-1. Improve the `--no-colour` option.
-   This was implemented quickly and requires some thought.
+1. Build it for all OSes, including macOS, Linux, and Windows.
 
-2. Build it for both macOS and Linux.
-
-3. Provide better support for multi-line commands.
+2. Provide better support for multi-line commands.
 
    The program is able to properly parse multi-line commands that either end
    with `\` or use the here document (`<<`), but does not handle the other types
@@ -102,6 +99,3 @@ $ me --help
      echo "It's false"
    fi
    ```
-
-4. Remove the `--delay-between-commands` and the `--interactive` options as
-   these are not needed anymore.
