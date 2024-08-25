@@ -41,7 +41,7 @@ mod tests {
 Print `Hello world!!`
 
 ```shell
-$ echo 'Hello world!!'
+echo 'Hello world!!'
 ```
 "#,
         );
@@ -70,17 +70,17 @@ Hello world!!
 Print some messages
 
 ```shell
-$ echo 'Hello 1!!'
+echo 'Hello 1!!'
 ```
 
 ```shell
-$ echo 'Hello 2!!'
-$ echo 'Line 1!!'
-$ echo 'Hello 3!!'
+echo 'Hello 2!!'
+echo 'Line 1!!'
+echo 'Hello 3!!'
 ```
 
 ```shell
-$ echo 'Hello 4!!'
+echo 'Hello 4!!'
 ```
 "#,
         );
@@ -110,7 +110,7 @@ Hello 4!!
             &format!("{}/README.md", dir),
             r#"# README Fixture
 ```shell
-$ echo 'Level 1'
+echo 'Level 1'
 ```
 "#,
         );
@@ -119,7 +119,7 @@ $ echo 'Level 1'
             &format!("{}/a/README.md", dir),
             r#"# README Fixture
 ```shell
-$ echo 'Level 2'
+echo 'Level 2'
 ```
 "#,
         );
@@ -128,7 +128,7 @@ $ echo 'Level 2'
             &format!("{}/a/b/README.md", dir),
             r#"# README Fixture
 ```shell
-$ echo 'Level 3'
+echo 'Level 3'
 ```
 "#,
         );

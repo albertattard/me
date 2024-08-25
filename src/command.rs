@@ -114,16 +114,11 @@ impl<'a> CommandsBlocks<'a> {
             }
 
             if let Some(offset) = within_command_block {
-                let mut command_line = if line.len() > offset {
+                let command_line = if line.len() > offset {
                     &line[offset..]
                 } else {
                     ""
                 };
-
-                /* TODO: Should we support this? */
-                if command_line.starts_with("$ ") {
-                    command_line = &command_line[2..];
-                }
 
                 buffered_commands.push(command_line);
 
@@ -240,7 +235,7 @@ No commands here!!
 Before command
 
 ```shell
-$ ls -la
+ls -la
 ```
 
 After command
@@ -257,15 +252,15 @@ After command
             let content = r#"# README
 
 ```shell
-$ echo "Hello"
+echo "Hello"
 ```
 
 ```shell
-$ ls -la
+ls -la
 ```
 
 ```shell
-$ echo "Goodbye"
+echo "Goodbye"
 ```
 "#;
 
@@ -292,19 +287,19 @@ $ echo "Goodbye"
             let content = r#"# README
 
 ```shell
-$ echo "Hello"
+echo "Hello"
 ```
 
 - `ls` command
 
   ```shell
-  $ ls -la
+  ls -la
   ```
 
   1. `echo` command
 
      ```shell
-     $ echo "Goodbye"
+     echo "Goodbye"
      ```
 "#;
 
@@ -331,7 +326,7 @@ $ echo "Hello"
             let content = r#"# README
 
 ```shell
-$ java \
+java \
   -jar target/app.jar
 ```
 "#;
@@ -351,7 +346,7 @@ $ java \
             let content = r#"# README
 
 ```shell
-$ patch -p1 -u './Test.java' << EOF
+patch -p1 -u './Test.java' << EOF
 --- ./Test.java
 +++ ./Test.java
 @@ -1,3 +1,2 @@
@@ -388,7 +383,7 @@ EOF
 - Step 1
 
   ```shell
-  $ patch -p1 -u './Test.java' << EOF
+  patch -p1 -u './Test.java' << EOF
   --- ./Test.java
   +++ ./Test.java
   @@ -1,3 +1,2 @@
@@ -452,9 +447,9 @@ done
             let content = r#"# README
 
 ```shell
-$ echo "Line 1"
-$ echo "Line 2"
-$ echo "Line 3"
+echo "Line 1"
+echo "Line 2"
+echo "Line 3"
 ```
 "#;
 
@@ -473,12 +468,12 @@ $ echo "Line 3"
             let content = r#"# README
 
 ```shell
-$ echo "Before"
-$ java \
+echo "Before"
+java \
   -jar target/app-1.jar
-$ java \
+java \
   -jar target/app-2.jar
-$ echo "After"
+echo "After"
 ```
 "#;
 
@@ -500,16 +495,16 @@ $ echo "After"
             let content = r#"# README
 
 ```shell
-$ echo "Line 1"
+echo "Line 1"
 ```
 
 ```shell
-$ echo "Hello there"
+echo "Hello there"
 ```
 
 ```shell
-$ echo "Line 2"
-$ echo "Hello there"
+echo "Line 2"
+echo "Hello there"
 ```
 "#;
 
