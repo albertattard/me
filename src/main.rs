@@ -17,7 +17,6 @@ fn main() {
             .with_execute_until(args.execute_until())
             .with_skip_commands(args.skip_commands())
             .with_execution_mode(args.execution_mode())
-            .with_prefix_commands(args.prefix_commands_with())
             .build()
             .as_shell_script();
 

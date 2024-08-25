@@ -54,12 +54,6 @@ pub(crate) struct Args {
     /// subdirectories and execute each MARKDOWN file from the directory it was found.
     #[arg(short, long, num_args = 0..=1, value_name = "DEPTH", default_missing_value = "2")]
     recursive: Option<usize>,
-
-    /// Prefix all commands with the given command.  For example, say you need to time all commands
-    /// using the `time` command, then you can use this option to prefix all commands found within
-    /// the MARKDOWN file with `time`.
-    #[arg(short, long, value_name = "COMMAND")]
-    prefix_commands_with: Option<String>,
 }
 
 impl Args {
@@ -87,10 +81,6 @@ impl Args {
         } else {
             ExecutionMode::Default
         }
-    }
-
-    pub(crate) fn prefix_commands_with(&self) -> Option<&str> {
-        self.prefix_commands_with.as_deref()
     }
 
     pub(crate) fn files(&self) -> Vec<MarkdownFile> {
