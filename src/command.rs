@@ -21,8 +21,8 @@ impl<'a> Options<'a> {
         self
     }
 
-    pub(crate) fn build(&'a self) -> Commands<'a> {
-        Commands::parse(self).expect("Failed to parse the MARKDOWN file")
+    pub(crate) fn build(&'a self) -> CommandsBlocks<'a> {
+        CommandsBlocks::parse(self).expect("Failed to parse the MARKDOWN file")
     }
 }
 
@@ -50,11 +50,11 @@ impl Display for ParserError {
 impl std::error::Error for ParserError {}
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Command<'a> {
+pub(crate) struct CommandBlock<'a> {
     lines: Vec<&'a str>,
 }
 
-impl<'a> Display for Command<'a> {
+impl<'a> Display for CommandBlock<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         let mut lines = self.lines.iter();
 
@@ -71,30 +71,46 @@ impl<'a> Display for Command<'a> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub(crate) struct Commands<'a> {
+pub(crate) struct CommandsBlocks<'a> {
     /* TODO: Consider switching to a VecDeque given that we pop elements from the front when iterating. */
-    commands: Vec<Command<'a>>,
+    commands: Vec<CommandBlock<'a>>,
 }
 
-impl<'a> Commands<'a> {
+impl<'a> CommandsBlocks<'a> {
     fn parse(options: &'a Options<'a>) -> Result<Self, ParserError> {
         let mut commands = vec![];
-        let mut buffer_command = vec![];
+        let mut buffered_commands = vec![];
 
         let mut within_command_block = None;
-        let mut within_here_document_block = None;
+        let mut skip_command_block = false;
 
         for line in options.content.lines() {
             if let Some(offset) = line.find("```shell") {
+                if within_command_block.is_some() {
+                    return ParserError::err("Nested code block are not supported".to_string());
+                }
+
                 within_command_block = Some(offset);
                 continue;
             }
 
             if let Some(offset) = within_command_block {
                 if line.len() > offset && line[offset..].eq("```") {
+                    if !skip_command_block {
+                        commands.push(CommandBlock {
+                            lines: buffered_commands,
+                        });
+                        buffered_commands = vec![];
+                    }
+
                     within_command_block = None;
+                    skip_command_block = false;
                     continue;
                 }
+            }
+
+            if skip_command_block {
+                continue;
             }
 
             if let Some(offset) = within_command_block {
@@ -103,58 +119,35 @@ impl<'a> Commands<'a> {
                 } else {
                     ""
                 };
+
+                /* TODO: Should we support this? */
                 if command_line.starts_with("$ ") {
                     command_line = &command_line[2..];
                 }
 
-                if let Some(delimiter) = within_here_document_block.as_ref() {
-                    buffer_command.push(command_line);
-                    if command_line == delimiter {
-                        commands.push(Command {
-                            lines: buffer_command,
-                        });
-                        buffer_command = vec![];
-                        within_here_document_block = None;
-                    }
-                    continue;
-                }
-
-                if command_line.contains("<<") {
-                    let parts: Vec<&str> = command_line.splitn(2, "<<").collect();
-                    within_here_document_block = Some(
-                        parts[1]
-                            .trim()
-                            .chars()
-                            .take_while(|&c| c != ' ')
-                            .collect::<String>(),
-                    );
-                    buffer_command.push(command_line);
-                    continue;
-                }
-
                 if command_line.ends_with('\\') {
-                    buffer_command.push(command_line);
+                    buffered_commands.push(command_line);
                     continue;
                 }
 
-                buffer_command.push(command_line);
+                buffered_commands.push(command_line);
 
                 /* Check if the command needs to be skipped and clear the buffer if so */
                 if let Some(regex) = &options.skip_commands {
-                    if regex.is_match(&buffer_command.join(" ")) {
-                        buffer_command.clear();
+                    if regex.is_match(&buffered_commands.join(" ")) {
+                        skip_command_block = true;
+                        buffered_commands.clear();
                         continue;
                     }
                 }
-
-                commands.push(Command {
-                    lines: buffer_command,
-                });
-                buffer_command = vec![];
             }
         }
 
-        Ok(Commands { commands })
+        if !buffered_commands.is_empty() {
+            ParserError::err("Failed to find closing code block".to_string())
+        } else {
+            Ok(CommandsBlocks { commands })
+        }
     }
 
     pub(crate) fn as_shell_script(&self) -> String {
@@ -207,7 +200,7 @@ set -e
     }
 }
 
-impl Display for Commands<'_> {
+impl Display for CommandsBlocks<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         for command in &self.commands {
             writeln!(f, "{}", command)?;
@@ -227,7 +220,7 @@ mod tests {
         fn parse_empty_content() {
             let content = "";
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
+            let parsed = CommandsBlocks::parse(&options);
             let expected = ok_empty();
             assert_eq!(expected, parsed);
         }
@@ -240,7 +233,7 @@ No commands here!!
 "#;
 
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
+            let parsed = CommandsBlocks::parse(&options);
             let expected = ok_empty();
             assert_eq!(expected, parsed);
         }
@@ -259,7 +252,7 @@ After command
 "#;
 
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
+            let parsed = CommandsBlocks::parse(&options);
             let expected = ok_of_strs(vec!["ls -la"]);
             assert_eq!(expected, parsed);
         }
@@ -282,8 +275,20 @@ $ echo "Goodbye"
 "#;
 
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
+            let parsed = CommandsBlocks::parse(&options);
+            let expected = Ok(CommandsBlocks {
+                commands: vec![
+                    CommandBlock {
+                        lines: vec!["echo \"Hello\""],
+                    },
+                    CommandBlock {
+                        lines: vec!["ls -la"],
+                    },
+                    CommandBlock {
+                        lines: vec!["echo \"Goodbye\""],
+                    },
+                ],
+            });
             assert_eq!(expected, parsed);
         }
 
@@ -309,8 +314,20 @@ $ echo "Hello"
 "#;
 
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
-            let expected = ok_of_strs(vec!["echo \"Hello\"", "ls -la", "echo \"Goodbye\""]);
+            let parsed = CommandsBlocks::parse(&options);
+            let expected = Ok(CommandsBlocks {
+                commands: vec![
+                    CommandBlock {
+                        lines: vec!["echo \"Hello\""],
+                    },
+                    CommandBlock {
+                        lines: vec!["ls -la"],
+                    },
+                    CommandBlock {
+                        lines: vec!["echo \"Goodbye\""],
+                    },
+                ],
+            });
             assert_eq!(expected, parsed);
         }
 
@@ -325,9 +342,9 @@ $ java \
 "#;
 
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
-            let expected = Ok(Commands {
-                commands: vec![Command {
+            let parsed = CommandsBlocks::parse(&options);
+            let expected = Ok(CommandsBlocks {
+                commands: vec![CommandBlock {
                     lines: vec!["java \\", "  -jar target/app.jar"],
                 }],
             });
@@ -351,9 +368,9 @@ EOF
 "#;
 
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
-            let expected = Ok(Commands {
-                commands: vec![Command {
+            let parsed = CommandsBlocks::parse(&options);
+            let expected = Ok(CommandsBlocks {
+                commands: vec![CommandBlock {
                     lines: vec![
                         "patch -p1 -u './Test.java' << EOF",
                         "--- ./Test.java",
@@ -388,9 +405,9 @@ EOF
 "#;
 
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
-            let expected = Ok(Commands {
-                commands: vec![Command {
+            let parsed = CommandsBlocks::parse(&options);
+            let expected = Ok(CommandsBlocks {
+                commands: vec![CommandBlock {
                     lines: vec![
                         "patch -p1 -u './Test.java' << EOF",
                         "--- ./Test.java",
@@ -400,6 +417,35 @@ EOF
                         "",
                         " -import java.io.Console;",
                         "EOF",
+                    ],
+                }],
+            });
+            assert_eq!(expected, parsed);
+        }
+
+        #[test]
+        fn parse_content_with_one_multi_line_command_block() {
+            let content = r#"# README
+
+```shell
+while [ "$(curl --silent --output /dev/null --write-out '%{http_code}' 'http://localhost:8080')" -ne '200' ]
+do
+  echo 'Waiting for the application to start'
+  sleep 1
+done
+```
+"#;
+
+            let options = Options::new(content);
+            let parsed = CommandsBlocks::parse(&options);
+            let expected = Ok(CommandsBlocks {
+                commands: vec![CommandBlock {
+                    lines: vec![
+                        "while [ \"$(curl --silent --output /dev/null --write-out '%{http_code}' 'http://localhost:8080')\" -ne '200' ]",
+                        "do",
+                        "  echo 'Waiting for the application to start'",
+                        "  sleep 1",
+                        "done",
                     ],
                 }],
             });
@@ -418,7 +464,7 @@ $ echo "Line 3"
 "#;
 
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
+            let parsed = CommandsBlocks::parse(&options);
             let expected = ok_of_strs(vec![
                 "echo \"Line 1\"",
                 "echo \"Line 2\"",
@@ -442,23 +488,15 @@ $ echo "After"
 "#;
 
             let options = Options::new(content);
-            let parsed = Commands::parse(&options);
-            let expected = Ok(Commands {
-                commands: vec![
-                    Command {
-                        lines: vec!["echo \"Before\""],
-                    },
-                    Command {
-                        lines: vec!["java \\", "  -jar target/app-1.jar"],
-                    },
-                    Command {
-                        lines: vec!["java \\", "  -jar target/app-2.jar"],
-                    },
-                    Command {
-                        lines: vec!["echo \"After\""],
-                    },
-                ],
-            });
+            let parsed = CommandsBlocks::parse(&options);
+            let expected = ok_of_strs(vec![
+                "echo \"Before\"",
+                "java \\",
+                "  -jar target/app-1.jar",
+                "java \\",
+                "  -jar target/app-2.jar",
+                "echo \"After\"",
+            ]);
             assert_eq!(expected, parsed);
         }
 
@@ -468,15 +506,21 @@ $ echo "After"
 
 ```shell
 $ echo "Line 1"
+```
+
+```shell
 $ echo "Hello there"
+```
+
+```shell
 $ echo "Line 2"
-$ echo "Line 3"
+$ echo "Hello there"
 ```
 "#;
 
             let skip_commands = Regex::new(r"Line \d").expect("Invalid skip commands regex");
             let options = Options::new(content).with_skip_commands(Some(&skip_commands));
-            let parsed = Commands::parse(&options);
+            let parsed = CommandsBlocks::parse(&options);
             let expected = ok_of_strs(vec!["echo \"Hello there\""]);
             assert_eq!(expected, parsed);
         }
@@ -515,8 +559,8 @@ echo "Goodbye"
 
         #[test]
         fn format_one_multi_line_command() {
-            let commands = Commands {
-                commands: vec![Command {
+            let commands = CommandsBlocks {
+                commands: vec![CommandBlock {
                     lines: vec!["java \\", " -jar target/app.jar"],
                 }],
             };
@@ -544,18 +588,18 @@ echo "Line 3"
 
         #[test]
         fn format_multiple_multi_line_commands() {
-            let commands = Commands {
+            let commands = CommandsBlocks {
                 commands: vec![
-                    Command {
+                    CommandBlock {
                         lines: vec!["echo \"Before\""],
                     },
-                    Command {
+                    CommandBlock {
                         lines: vec!["java \\", " -jar target/app-1.jar"],
                     },
-                    Command {
+                    CommandBlock {
                         lines: vec!["java \\", " -jar target/app-2.jar"],
                     },
-                    Command {
+                    CommandBlock {
                         lines: vec!["echo \"After\""],
                     },
                 ],
@@ -573,8 +617,8 @@ echo "After"
 
         #[test]
         fn format_as_shell_script_with_default_execution() {
-            let commands = Commands {
-                commands: vec![Command {
+            let commands = CommandsBlocks {
+                commands: vec![CommandBlock {
                     lines: vec!["java \\", " -XshowSettings:vm \\", " --version"],
                 }],
             };
@@ -599,25 +643,21 @@ java \
         }
     }
 
-    fn ok_empty() -> Result<Commands<'static>, ParserError> {
+    fn ok_empty() -> Result<CommandsBlocks<'static>, ParserError> {
         Ok(empty())
     }
 
-    fn ok_of_strs(commands: Vec<&str>) -> Result<Commands<'_>, ParserError> {
+    fn ok_of_strs(commands: Vec<&str>) -> Result<CommandsBlocks<'_>, ParserError> {
         Ok(of_strs(commands))
     }
 
-    fn empty() -> Commands<'static> {
-        Commands { commands: vec![] }
+    fn empty() -> CommandsBlocks<'static> {
+        CommandsBlocks { commands: vec![] }
     }
 
-    fn of_strs(commands: Vec<&str>) -> Commands<'_> {
-        let commands = commands
-            .iter()
-            .map(|command| Command {
-                lines: vec![command],
-            })
-            .collect();
-        Commands { commands }
+    fn of_strs(commands: Vec<&str>) -> CommandsBlocks<'_> {
+        CommandsBlocks {
+            commands: vec![CommandBlock { lines: commands }],
+        }
     }
 }

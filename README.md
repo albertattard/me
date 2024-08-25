@@ -85,17 +85,3 @@ $ me --help
 ## Pending
 
 1. Build it for all OSes, including macOS, Linux, and Windows.
-
-2. Provide better support for multi-line commands.
-
-   The program is able to properly parse multi-line commands that either end
-   with `\` or use the here document (`<<`), but does not handle the other types
-   of multi-line commands well, such as `if` statements as shown below.
-
-   ```shell
-   if [ "${EXP}" ]; then
-     echo "It's true"
-   else
-     echo "It's false"
-   fi
-   ```
