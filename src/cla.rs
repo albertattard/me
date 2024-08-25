@@ -15,20 +15,6 @@ pub(crate) struct Args {
     #[arg(short, long, default_value = "README.md")]
     file_name: String,
 
-    /// Executes from the given command, or line within the file.  When provided, anything before
-    /// this line is ignored.  The matching command is not ignored.  If no matching lines are found,
-    /// then the program will panic.  If more than one line matches, the program will start from
-    /// the first matching line.
-    #[arg(short = 'b', long, num_args = 0..=1, default_missing_value = "---EXECUTE-FROM-HERE---")]
-    execute_from: Option<String>,
-
-    /// Executes until the given command, or line within the file.  When provided, anything after
-    /// this line is ignored.  The matching command is not ignored.  If no matching lines are found,
-    /// then the program will panic.  If more than one line matches, the program will stop at the
-    /// first matching line.
-    #[arg(short = 'e', long, num_args = 0..=1, default_missing_value = "---EXECUTE-UNTIL-HERE---")]
-    execute_until: Option<String>,
-
     /// Skips all commands that match the provided regular expression.  Nothing happens if the given
     /// regular expression does not match any commands.
     #[arg(short, long)]
@@ -43,14 +29,6 @@ pub(crate) struct Args {
 impl Args {
     pub(crate) fn create() -> Self {
         Args::parse()
-    }
-
-    pub(crate) fn execute_from(&self) -> Option<&str> {
-        self.execute_from.as_deref()
-    }
-
-    pub(crate) fn execute_until(&self) -> Option<&str> {
-        self.execute_until.as_deref()
     }
 
     pub(crate) fn skip_commands(&self) -> Option<&Regex> {

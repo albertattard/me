@@ -13,8 +13,6 @@ fn main() {
 
     for markdown in args.files() {
         let shell_script = Options::new(&markdown.read())
-            .with_execute_from(args.execute_from())
-            .with_execute_until(args.execute_until())
             .with_skip_commands(args.skip_commands())
             .build()
             .as_shell_script();
@@ -87,22 +85,21 @@ $ echo 'Hello 4!!'
         Command::cargo_bin("../release/me")
             .expect("Failed to create test command")
             .current_dir(dir)
-            .args([
-                "--execute-from",
-                "$ echo 'Hello 2!!'",
-                "--execute-until",
-                "$ echo 'Hello 3!!'",
-                "--skip-commands",
-                "Line \\d+",
-            ])
+            .args(["--skip-commands", "Line \\d+"])
             .assert()
             .stdout(format!(
                 r#"---
+$ echo 'Hello 1!!'
+Hello 1!!
+---
 $ echo 'Hello 2!!'
 Hello 2!!
 ---
 $ echo 'Hello 3!!'
 Hello 3!!
+---
+$ echo 'Hello 4!!'
+Hello 4!!
 "#
             ))
             .success();
